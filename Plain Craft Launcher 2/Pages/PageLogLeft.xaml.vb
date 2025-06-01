@@ -40,24 +40,45 @@
                 If Uuid = CurrentUuid Then NewItem.Checked = True
                 FrmLogLeft.PanList.Children.Add(NewItem)
             Next
+
+            '通知日志保留设置
+            'TODO(i18n): 文本 @ PageLog 左侧 - 日志保留设置通知
+            If Not Setup.Get("HintMaxLog") Then
+                Setup.Set("HintMaxLog", True)
+                Hint("实时日志默认只保留 500 行，你可以在 设置 → 其他 → 系统 → 实时日志行数 中修改！")
+            End If
             IsLoading -= 1
         Catch ex As Exception
             Log(ex, "构建游戏实时日志 UI 出错", LogLevel.Feedback)
         End Try
     End Sub
     Private Sub OnLogOutput(sender As Watcher, e As LogOutputEventArgs)
-        For Each item In ShownLogs
-            If item.Value.GameProcess.Id = sender.GameProcess.Id Then
-                Dim uuid As Integer = item.Key
-                Dim margin As Thickness
-                If item.Value.GameProcess.HasExited Then
-                    margin = New Thickness(0, 12, 0, 0)
+        For Each Item In ShownLogs
+            If Item.Value.GameProcess.Id = sender.GameProcess.Id Then
+                Dim Uuid As Integer = Item.Key
+                Dim Margin As Thickness
+                If Item.Value.GameProcess.HasExited Then
+                    Margin = New Thickness(0, 12, 0, 0)
                 Else
-                    margin = New Thickness(0)
+                    Margin = New Thickness(0)
                 End If
                 RunInUi(Sub()
-                            Dim paragraph As New Paragraph(New Run(e.LogText)) With {.Foreground = e.Color, .Margin = margin}
-                            FlowDocuments(uuid).Blocks.Add(paragraph)
+                            Dim Paragraph As New Paragraph(New Run(e.LogText)) With {.Foreground = e.Color, .Margin = Margin}
+                            FlowDocuments(Uuid).Blocks.Add(Paragraph)
+                            Dim MaxLog As ULong = Setup.Get("SystemMaxLog")
+                            Select Case MaxLog
+                                Case Is <= 5
+                                    MaxLog = MaxLog * 10 + 50
+                                Case Is <= 13
+                                    MaxLog = MaxLog * 50 - 150
+                                Case Is <= 28
+                                    MaxLog = MaxLog * 100 - 800
+                                Case Else
+                                    MaxLog = 18446744073709551615UL
+                            End Select
+                            While FlowDocuments(Uuid).Blocks.Count > MaxLog
+                                FlowDocuments(Uuid).Blocks.Remove(FlowDocuments(Uuid).Blocks.FirstBlock)
+                            End While
                         End Sub)
                 Return
             End If
