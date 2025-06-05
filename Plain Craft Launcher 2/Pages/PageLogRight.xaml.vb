@@ -28,6 +28,23 @@
         CardOperation.Visibility = Visibility.Visible
         BtnOperationKill.IsEnabled = Not FrmLogLeft.CurrentLog.GameProcess.HasExited
         BtnOperationExportStackDump.IsEnabled = (Not FrmLogLeft.CurrentLog.GameProcess.HasExited) And Not String.IsNullOrWhiteSpace(FrmLogLeft.CurrentLog.JStackPath)
+        SliderMaxLog.Value = Setup.Get("SystemMaxLog")
+        SliderMaxLog.GetHintText =
+            Function(v)
+                'y = 10x + 50 (0 <= x <= 5, 50 <= y <= 100)
+                'y = 50x - 150 (5 < x <= 13, 100 < y <= 500)
+                'y = 100x - 800 (13 < x <= 28, 500 < y <= 2000)
+                Select Case v
+                    Case Is <= 5
+                        Return v * 10 + 50
+                    Case Is <= 13
+                        Return v * 50 - 150
+                    Case Is <= 28
+                        Return v * 100 - 800
+                    Case Else
+                        Return "无限制"
+                End Select
+            End Function
         '绑定日志输出
         PanLog.Document = FrmLogLeft.FlowDocuments(FrmLogLeft.CurrentUuid)
         '绑定事件
@@ -107,6 +124,14 @@
     Private Sub OnGameExit()
         RunInUi(Sub() BtnOperationKill.IsEnabled = False)
         RunInUi(Sub() BtnOperationExportStackDump.IsEnabled = False)
+    End Sub
+#End Region
+
+#Region "滑动条"
+    Private Sub SliderMaxLog_ValueChanged(sender As MySlider, user As Boolean) Handles SliderMaxLog.Change
+        Setup.Set(sender.Tag, sender.Value)
+        If FrmSetupSystem Is Nothing Then Exit Sub
+        FrmSetupSystem.SliderMaxLog.Value = sender.Value
     End Sub
 #End Region
 

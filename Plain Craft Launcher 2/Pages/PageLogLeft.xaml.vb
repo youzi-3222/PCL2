@@ -45,7 +45,7 @@
             'TODO(i18n): 文本 @ PageLog 左侧 - 日志保留设置通知
             If Not Setup.Get("HintMaxLog") Then
                 Setup.Set("HintMaxLog", True)
-                Hint("实时日志默认只保留 500 行，你可以在 设置 → 其他 → 系统 → 实时日志行数 中修改！")
+                Hint("实时日志默认只保留 500 行，你可以在 实时日志行数 设置中修改！")
             End If
             IsLoading -= 1
         Catch ex As Exception
