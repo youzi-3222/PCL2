@@ -60,6 +60,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
+                    <!-- TODO(i18n): 文本 @ PageLog 右侧 - 滑动条1 # 实时日志行数 -->
                     <TextBlock Grid.Column="0" HorizontalAlignment="Left" Text="实时日志行数" Margin="0,0,25,0" />
                     <local:MySlider x:Name="SliderMaxLog" Grid.Column="1" HorizontalAlignment="Stretch" 
                             Tag="SystemMaxLog" MaxValue="29" Value="13"
