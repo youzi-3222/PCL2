@@ -19,7 +19,13 @@
         LabFatal = New Run("0 Fatal") With {.Foreground = Application.Current.Resources("ColorBrushFatal")}
         PanLogCard.Inlines.Add(LabFatal)
     End Sub
-    Public Sub Refresh()
+
+    Private Sub PageLogRight_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        AniControlEnabled += 1
+        Reload()
+        AniControlEnabled -= 1
+    End Sub
+    Public Sub Reload()
         '初始化
         If FrmLogLeft.CurrentLog Is Nothing OrElse FrmLogLeft.CurrentUuid <= 0 OrElse FrmLogLeft.ShownLogs.Count = 0 Then
             FrmMain.PageChange(FrmMain.PageCurrent)
@@ -70,9 +76,6 @@
     Public LabError As Run = Nothing
     Public LabFatal As Run = Nothing
 
-    Private Sub PageLogRight_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        Refresh()
-    End Sub
     Private Sub OnLogOutput(sender As Watcher, e As LogOutputEventArgs)
         RunInUi(Sub()
                     If FrmLogLeft.CurrentLog IsNot Nothing Then

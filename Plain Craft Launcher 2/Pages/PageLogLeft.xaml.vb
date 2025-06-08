@@ -5,13 +5,13 @@
     Public CurrentLog As Watcher
     Public IsLoading As Integer = 0
     Private Sub PageLogLeft_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        Refresh()
+        Reload()
         FrmMain.BtnExtraLog.ShowRefresh()
     End Sub
     Private Sub PageLogLeft_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
         FrmMain.BtnExtraLog.ShowRefresh()
     End Sub
-    Private Sub Refresh()
+    Private Sub Reload()
         Try
             If ShownLogs.Count = 0 Then
                 FrmMain.PageChange(FrmMain.PageCurrentSub)
@@ -108,8 +108,8 @@
             Next
         End If
         RunInUi(Sub()
-                    FrmLogRight.Refresh()
-                    Refresh()
+                    FrmLogRight.Reload()
+                    Reload()
                 End Sub)
     End Sub
     Public Sub RemoveItem(Uuid As Integer)
@@ -126,8 +126,8 @@
                 End If
             Else
                 RunInUi(Sub()
-                            FrmLogRight.Refresh()
-                            Refresh()
+                            FrmLogRight.Reload()
+                            Reload()
                         End Sub)
             End If
             Exit For

@@ -6,7 +6,7 @@
     <Grid>
         <Grid x:Name="PanAllBack">
 			<!-- TODO(i18n): 文本 @ PageLog 右侧 - 上方卡片标题 -->
-            <local:MyCard Margin="16,16,16,70" x:Name="PanLogCard">
+            <local:MyCard Margin="16,16,16,120" x:Name="PanLogCard">
                 <local:MyScrollViewer Margin="12,40,12,20"
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled"
