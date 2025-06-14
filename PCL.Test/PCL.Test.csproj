@@ -125,6 +125,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConfigureTest.cs" />
     <Compile Include="DynamicJsonTest.cs" />
     <Compile Include="JavaTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
