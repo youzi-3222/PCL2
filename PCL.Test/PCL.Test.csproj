@@ -171,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConfigureTest.cs" />
+    <Compile Include="DiffTest.cs" />
     <Compile Include="DynamicJsonTest.cs" />
     <Compile Include="JavaTest.cs" />
     <Compile Include="Project\Modrinth.cs" />
