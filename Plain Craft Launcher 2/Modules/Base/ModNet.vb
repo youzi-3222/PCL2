@@ -48,15 +48,27 @@ Public Module ModNet
             _httpClientHandler = Nothing
         End If
         If _httpClient Is Nothing Then
-            _httpClientHandler = New HttpClientHandler()
-            With _httpClientHandler
-                .Proxy = GetProxy()
-                .MaxConnectionsPerServer = 1024
-                .AutomaticDecompression = DecompressionMethods.GZip Or DecompressionMethods.Deflate Or DecompressionMethods.None
-            End With
-            _httpClient = New HttpClient(_httpClientHandler)
+            InitHttpClient().GetAwaiter().GetResult()
         End If
         Return _httpClient
+    End Function
+
+    Private _httpInitTask As Task
+    Private Function InitHttpClient() As Task
+        If _httpInitTask Is Nothing Then
+            _httpInitTask = Task.Run(Sub()
+                                         _httpClientHandler = New HttpClientHandler() With {
+                                            .Proxy = GetProxy(),
+                                            .MaxConnectionsPerServer = 1024,
+                                            .AutomaticDecompression = DecompressionMethods.GZip,
+                                            .AllowAutoRedirect = True,
+                                            .UseCookies = True,
+                                            .CookieContainer = New CookieContainer()
+                                        }
+                                         _httpClient = New HttpClient(_httpClientHandler)
+                                     End Sub)
+        End If
+        Return _httpInitTask
     End Function
 
     ''' <summary>
@@ -1047,7 +1059,7 @@ Capture:
                     Dim TargetUrl As String = GetSource().Url
                     If TargetUrl.Contains("pcl2-server") OrElse TargetUrl.Contains("bmclapi") OrElse TargetUrl.Contains("github.com") OrElse
                        TargetUrl.Contains("optifine.net") OrElse TargetUrl.Contains("modrinth") OrElse TargetUrl.Contains("gitcode") OrElse
-                       TargetUrl.Contains("pysio.online") OrElse TargetUrl.Contains("mirrorchyan.com") Then Return Nothing
+                       TargetUrl.Contains("pysio.online") OrElse TargetUrl.Contains("mirrorchyan.com") OrElse TargetUrl.Contains("naids.com") Then Return Nothing
                     '寻找最大碎片
                     'FUTURE: 下载引擎重做，计算下载源平均链接时间和线程下载速度，按最高时间节省来开启多线程
                     Dim FilePieceMax As NetThread = Threads
@@ -1110,8 +1122,8 @@ StartThread:
                 If SourcesOnce.Contains(Info.Source) AndAlso Not Info.Equals(Info.Source.Thread) Then GoTo SourceBreak
                 ' 使用 HttpClient 替代 HttpWebRequest
                 Dim request As New HttpRequestMessage(HttpMethod.Get, Info.Source.Url)
-                request.Headers.Range = New System.Net.Http.Headers.RangeHeaderValue(Info.DownloadStart, Nothing)
                 SecretHeadersSign(Info.Source.Url, request, UseBrowserUserAgent)
+                request.Headers.Range = New Headers.RangeHeaderValue(Info.DownloadStart, Nothing)
                 Using cts As New CancellationTokenSource
                     cts.CancelAfter(Timeout)
                     Using response = GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).Result
