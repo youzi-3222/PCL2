@@ -538,7 +538,7 @@ RequestFinished:
             Log($"[Net] 获取 {Url} 的重定向链接……")
             Using request As New HttpRequestMessage(HttpMethod.Get, Url)
                 Using cts As New CancellationTokenSource()
-                    cts.CancelAfter(TimeSpan.FromSeconds(10))
+                    cts.CancelAfter(TimeSpan.FromSeconds(25))
                     Using response = GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).Result
                         response.EnsureSuccessStatusCode()
                         Dim ret = response.RequestMessage.RequestUri.ToString()
