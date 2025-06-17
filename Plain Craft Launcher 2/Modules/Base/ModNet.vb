@@ -527,6 +527,32 @@ RequestFinished:
             Throw nx
         End Try
     End Function
+    ''' <summary>
+    ''' 获取重定向后的 Url，此功能用于多线程下载处
+    ''' 因为 Range 的存在导致服务器错误的认为直接下载的问题
+    ''' </summary>
+    ''' <param name="Url"></param>
+    ''' <returns></returns>
+    Public Function NetRequestGetRedirectUri(Url As String) As String
+        Try
+            Log($"[Net] 获取 {Url} 的重定向链接……")
+            Using request As New HttpRequestMessage(HttpMethod.Get, Url)
+                Using cts As New CancellationTokenSource()
+                    cts.CancelAfter(TimeSpan.FromSeconds(10))
+                    Using response = GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).Result
+                        response.EnsureSuccessStatusCode()
+                        Dim ret = response.RequestMessage.RequestUri.ToString()
+                        Log($"[Net] 已获取到重定向链接地址为 {ret}")
+                        Return ret
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            Log(ex, $"获取 {Url} 重定向链接失败")
+            Return Url
+        End Try
+    End Function
+
     Public Class ResponsedWebException
         Inherits WebException
         ''' <summary>
@@ -1076,6 +1102,9 @@ StartThread:
                     '构建线程
                     Dim ThreadUuid As Integer = GetUuid()
                     If Not Tasks.Any() Then Return Nothing '由于中断，已没有可用任务
+                    If StartSource.Url.Contains("edge.forgecdn.net") Then '处理 Curseforge 的重定向
+                        StartSource.Url = NetRequestGetRedirectUri(StartSource.Url)
+                    End If
                     Th = New Thread(AddressOf Thread) With {.Name = $"NetTask {Tasks(0).Uuid}/{Uuid} Download {ThreadUuid}#", .Priority = ThreadPriority.BelowNormal}
                     ThreadInfo = New NetThread With {.Uuid = ThreadUuid, .DownloadStart = StartPosition, .Thread = Th, .Source = StartSource, .Task = Me, .State = NetState.WaitForDownload}
                     '链表处理
