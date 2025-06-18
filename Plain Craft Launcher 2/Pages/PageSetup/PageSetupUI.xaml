@@ -99,6 +99,12 @@
                             <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left" Text="字体" Margin="0,0,25,0" />
                             <local:MyComboBox x:Name="ComboUiFont" Grid.Column="1"/>
                         </Grid>
+                        <StackPanel x:Name="PanelBlur" Margin="0,0,0,7">
+                            <local:MyCheckBox Text="高级材质" Margin="0,0,0,5" Height="22" x:Name="CheckBlur" Tag="UiBlur" />
+                            <Grid x:Name="PanBlurChange" Margin="0,14,0,5" Height="35">
+                                <local:MySlider x:Name="SliderBlur" Tag="UiBlurValue" MaxValue="1000" ValueByKey="10"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </local:MyCard>
