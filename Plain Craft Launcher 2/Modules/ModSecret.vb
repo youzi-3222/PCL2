@@ -582,8 +582,14 @@ PCL-Community 及其成员与龙腾猫跃无从属关系，且均不会为您的
         ThemeRefreshMain()
     End Sub
 
-    Public Event BlurChanged As EventHandler(Of Integer)
-
+    Public Function GetDarkThemeLight(OriginalLight As Double) As Double
+        If IsDarkMode Then
+            Return OriginalLight * 0.1
+        Else
+            Return OriginalLight
+        End If
+    End Function
+    
     Public Sub ThemeRefreshColor()
 #If DEBUG Then
         If EnableCustomTheme Then
