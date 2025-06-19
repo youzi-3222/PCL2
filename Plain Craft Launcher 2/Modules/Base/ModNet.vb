@@ -106,6 +106,24 @@ Public Module ModNet
     End Class
     
     ''' <summary>
+    ''' <see cref="HttpRequestFailedException"/> 的套壳，包含 <c>StatusCode</c> 属性。<br/>
+    ''' 在此，向龙猫的石山代码致敬。
+    ''' </summary>
+    Public Class HttpWebException
+        Inherits WebException
+        Public ReadOnly Property InnerHttpException As HttpRequestFailedException
+        Public ReadOnly Property StatusCode As HttpStatusCode
+            Get
+                Return InnerHttpException.StatusCode
+            End Get
+        End Property
+        Public Sub New(message As String, ex As HttpRequestFailedException)
+            MyBase.New(message, ex)
+            InnerHttpException = ex
+        End Sub
+    End Class
+    
+    ''' <summary>
     ''' <see cref="HttpResponseMessage.EnsureSuccessStatusCode"/> 的改进版，将抛出附带 <c>StatusCode</c> 和 <c>ReasonPhrase</c> 属性的异常。
     ''' 这个改进已经在 .NET 5 官方实装，鬼知道为什么 .NET Framework 连最新的 4.8.1 都这么原始。
     ''' </summary>
@@ -184,6 +202,8 @@ Retry:
             End Using
         Catch ex As TaskCanceledException
             Throw New TimeoutException("连接服务器超时（" & Url & "）", ex)
+        Catch ex As HttpRequestFailedException
+            Throw New HttpWebException("获取结果失败，" & ex.Message & "（" & Url & "）", ex)
         Catch ex As Exception
             Throw New WebException("获取结果失败，" & ex.Message & "（" & Url & "）", ex)
         End Try
@@ -307,6 +327,8 @@ RequestFinished:
             End Using
         Catch ex As TaskCanceledException
             Throw New TimeoutException("连接服务器超时（" & Url & "）", ex)
+        Catch ex As HttpRequestFailedException
+            Throw New HttpWebException("获取结果失败，" & ex.Message & "（" & Url & "）", ex)
         Catch ex As Exception
             Throw New WebException("获取结果失败，" & ex.Message & "（" & Url & "）", ex)
         End Try
@@ -366,8 +388,8 @@ RequestFinished:
             End Using
         Catch ex As TaskCanceledException When ex.InnerException Is Nothing
             Throw New TimeoutException($"下载超时（{Url}）", ex)
-        Catch ex As HttpRequestException
-            Throw New WebException($"下载失败：{ex.Message}（{Url}）", ex)
+        Catch ex As HttpRequestFailedException
+            Throw New HttpWebException($"下载失败：{ex.Message}（{Url}）", ex)
         Catch ex As Exception
             If File.Exists(LocalFile) Then File.Delete(LocalFile)
             Throw New WebException($"下载失败：{ex.Message}（{Url}）", ex)
@@ -548,7 +570,9 @@ RequestFinished:
         Catch ex As ThreadInterruptedException
             Throw
         Catch ex As Exception
-            Dim nx = New WebException("网络请求失败（" & Url & "）", ex)
+            Dim nx = If(TypeOf ex Is HttpRequestFailedException,
+                        New HttpWebException("网络请求失败（" & Url & "）", ex),
+                        New WebException("网络请求失败（" & Url & "）", ex))
             If MakeLog Then Log(nx, "NetRequestOnce 请求失败", LogLevel.Developer)
             Throw nx
         End Try
