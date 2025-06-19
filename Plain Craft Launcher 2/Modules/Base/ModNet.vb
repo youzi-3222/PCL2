@@ -98,10 +98,15 @@ Public Module ModNet
         Inherits HttpRequestException
         Public ReadOnly Property StatusCode As HttpStatusCode
         Public ReadOnly Property ReasonPhrase As String
-        Public Sub New(statusCode As HttpStatusCode, reasonPhrase As String)
-            MyBase.New($"HTTP 响应失败: {reasonPhrase} ({CType(statusCode, Integer)})")
-            Me.StatusCode = statusCode
-            Me.ReasonPhrase = reasonPhrase
+        ''' <summary>
+        ''' 不要尝试读取 <c>Content</c> 属性的内容，它已经被 dispose 了
+        ''' </summary>
+        Public ReadOnly Property Response As HttpResponseMessage
+        Public Sub New(response As HttpResponseMessage)
+            MyBase.New($"HTTP 响应失败: {response.ReasonPhrase} ({CType(response.StatusCode, Integer)})")
+            Me.Response = response
+            StatusCode = response.StatusCode
+            ReasonPhrase = response.ReasonPhrase
         End Sub
     End Class
     
@@ -131,7 +136,7 @@ Public Module ModNet
     Private Sub EnsureSuccessStatusCode(response As HttpResponseMessage)
         If Not response.IsSuccessStatusCode Then
             response.Content?.Dispose()
-            Throw New HttpRequestFailedException(response.StatusCode, response.ReasonPhrase)
+            Throw New HttpRequestFailedException(response)
         End If
     End Sub
 
