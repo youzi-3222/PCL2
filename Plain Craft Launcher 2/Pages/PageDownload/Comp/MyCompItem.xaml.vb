@@ -1,4 +1,4 @@
-﻿Public Class MyCompItem
+Public Class MyCompItem
 
 #Region "基础属性"
     Public Uuid As Integer = GetUuid()
@@ -69,11 +69,11 @@
             PanTags.Visibility = If(value.Any(), Visibility.Visible, Visibility.Collapsed)
             For Each TagText In value
                 Dim NewTag = GetObjectFromXML(
-                "<Border xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+                "<corelocal:BlurBorder xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
                          Background=""#11000000"" Padding=""3,1"" CornerRadius=""3"" Margin=""0,0,3,0"" 
                          SnapsToDevicePixels=""True"" UseLayoutRounding=""False"">
                    <TextBlock Text=""" & TagText & """ Foreground=""#868686"" FontSize=""11"" />
-                </Border>")
+                </corelocal:BlurBorder>")
                 PanTags.Children.Add(NewTag)
             Next
         End Set
@@ -174,7 +174,7 @@
                 SetRowSpan(Rect, 999)
                 Children.Insert(0, Rect)
                 _RectBack = Rect
-                '<!--<Border x:Name = "RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" 
+                '<!--<corelocal:BlurBorder x:Name = "RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" 
                 'IsHitTestVisible = "False" Opacity="0" BorderThickness="1" 
                 'Grid.ColumnSpan = "4" Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrush6}"/>-->
             End If

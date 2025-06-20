@@ -778,7 +778,7 @@ Refresh:
         End Function
         SliderBackgroundOpacity.GetHintText = Function(v) Math.Round(v * 0.1) & "%"
         SliderBackgroundBlur.GetHintText = Function(v) v & " 像素"
-        SliderBlurValue.GetHintText = Function(v) v
+        SliderBlurValue.GetHintText = Function(v) v & " 像素"
     End Sub
 
 End Class

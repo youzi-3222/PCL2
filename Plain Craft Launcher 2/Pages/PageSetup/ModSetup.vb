@@ -125,7 +125,7 @@ Public Class ModSetup
         {"UiLauncherLogo", New SetupEntry(True)},
         {"UiLauncherCEHint", New SetupEntry(True, Source:=SetupSource.Registry)},
         {"UiBlur", New SetupEntry(False)},
-        {"UiBlurValue", New SetupEntry(500)},
+        {"UiBlurValue", New SetupEntry(16)},
         {"UiBackgroundColorful", New SetupEntry(True)},
         {"UiBackgroundOpacity", New SetupEntry(1000)},
         {"UiBackgroundBlur", New SetupEntry(0)},
@@ -716,6 +716,11 @@ Public Class ModSetup
     '高级材质
     Public Sub UiBlur(Value As Boolean)
         FrmSetupUI.PanBlurValue.Visibility = If(Value, Visibility.Visible, Visibility.Collapsed)
+        If Value Then
+            UiBlurValue(Setup.Get("UiBlurValue"))
+        Else
+            UiBlurValue(0)
+        End If
     End Sub
     Public Sub UiBlurValue(Value As Integer)
         BlurHelper.RaiseBlurChanged(Value)
