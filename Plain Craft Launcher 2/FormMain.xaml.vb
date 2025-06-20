@@ -1,6 +1,7 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
+Imports PCL.Core.Helper
 
 Public Class FormMain
 
@@ -127,6 +128,9 @@ Public Class FormMain
         End Select
 
         ThemeRefresh()
+
+        BlurHelper.RaiseBlurChanged(Setup.Get("UiBlurValue"))
+
         Try
             Height = Setup.Get("WindowHeight")
             Width = Setup.Get("WindowWidth")

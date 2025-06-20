@@ -464,6 +464,8 @@
                         <RowDefinition Height="60" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="60" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="60" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Java Launch Wrapper" TextWrapping="Wrap" FontWeight="Bold" />
                     <TextBlock Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2022 00ll00&#xa;Licensed under the MIT License." TextWrapping="Wrap" />
@@ -581,6 +583,13 @@ EventType="打开网页" EventData="https://licenses.nuget.org/MIT" />
                 EventType="打开网页" EventData="https://github.com/PCL-Community/PCL.Core" />
                     <local:MyButton Grid.Row="33" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
 EventType="打开网页" EventData="https://github.com/PCL-Community/PCL.Core/blob/main/LICENCE" />
+
+                    <TextBlock Grid.Row="34" Grid.Column="0" Text="EleCho.WpfSuite" TextWrapping="Wrap" FontWeight="Bold" />
+                    <TextBlock Grid.Row="34" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © EleCho" TextWrapping="Wrap" />
+                    <local:MyButton Grid.Row="35" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                EventType="打开网页" EventData="https://github.com/OrgEleCho/EleCho.WpfSuite" />
+                    <local:MyButton Grid.Row="35" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+EventType="打开网页" EventData="https://github.com/OrgEleCho/EleCho.WpfSuite/blob/master/LICENSE.txt" />
                 </Grid>
             </local:MyCard>
         </StackPanel>
