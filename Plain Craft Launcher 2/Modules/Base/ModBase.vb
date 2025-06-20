@@ -3113,65 +3113,6 @@ Retry:
         ''' </summary>
         Critical = 6
     End Enum
-    Private LogList As New StringBuilder
-    Private LogWritter As StreamWriter
-    Public Sub LogStart()
-        RunInNewThread(
-        Sub()
-            Dim IsInitSuccess As Boolean = True
-            Try
-                For i = 4 To 1 Step -1
-                    If File.Exists(Path & "PCL\Log-CE" & i & ".log") Then
-                        If File.Exists(Path & "PCL\Log-CE" & (i + 1) & ".log") Then File.Delete(Path & "PCL\Log-CE" & (i + 1) & ".log")
-                        CopyFile(Path & "PCL\Log-CE" & i & ".log", Path & "PCL\Log-CE" & (i + 1) & ".log")
-                    End If
-                Next
-                File.Create(Path & "PCL\Log-CE1.log").Dispose()
-            Catch ex As IOException
-                IsInitSuccess = False
-                Hint("可能同时开启了多个 PCL，程序可能会出现未知问题！", HintType.Critical)
-                Log(ex, "日志初始化失败（疑似文件占用问题）")
-            Catch ex As ComponentModel.Win32Exception
-                Hint("与系统底层交互异常，请尝试通过重新安装 .NET 框架解决！", HintType.Critical)
-            Catch ex As Exception
-                IsInitSuccess = False
-                Log(ex, "日志初始化失败", LogLevel.Hint)
-            End Try
-            Try
-                LogWritter = New StreamWriter(Path & "PCL\Log-CE1.log", True) With {.AutoFlush = True}
-            Catch ex As Exception
-                LogWritter = Nothing
-                Log(ex, "日志写入失败", LogLevel.Hint)
-            End Try
-            While True
-                If IsInitSuccess Then
-                    LogFlush()
-                Else
-                    LogList = New StringBuilder '清空 LogList 避免内存爆炸
-                End If
-                Thread.Sleep(50)
-            End While
-        End Sub, "Log Writer", ThreadPriority.Lowest)
-    End Sub
-    Private ReadOnly LogFlushLock As New Object '防止外部调用 LogFlush 时同时输出多次日志
-    Public Sub LogFlush()
-        On Error Resume Next
-        If LogWritter Is Nothing Then Return
-        Dim Log As String = Nothing
-        SyncLock LogFlushLock
-            If LogList.Length > 0 Then
-                Dim LogListCache As StringBuilder
-                LogListCache = LogList
-                LogList = New StringBuilder
-                Log = LogListCache.ToString
-            End If
-        End SyncLock
-        If Log IsNot Nothing Then
-            LogWritter.Write(Log)
-        End If
-    End Sub
-
-    Private ReadOnly LogListLock As New Object '防止日志乱码，只在调试模式下启用
     Private IsCriticalErrorTriggered As Boolean = False
     ''' <summary>
     ''' 输出 Log。
