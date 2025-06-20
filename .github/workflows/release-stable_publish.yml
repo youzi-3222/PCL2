@@ -25,6 +25,7 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: ${{ !github.event.release.prerelease }}
     steps:
       - name: Checkout all
         uses: actions/checkout@v4
