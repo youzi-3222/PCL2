@@ -1,4 +1,4 @@
-﻿Public Class MyCompItem
+Public Class MyCompItem
 
 #Region "基础属性"
     Public Uuid As Integer = GetUuid()
@@ -174,7 +174,7 @@
                 SetRowSpan(Rect, 999)
                 Children.Insert(0, Rect)
                 _RectBack = Rect
-                '<!--<Border x:Name = "RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" 
+                '<!--<corelocal:BlurBorder x:Name = "RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" 
                 'IsHitTestVisible = "False" Opacity="0" BorderThickness="1" 
                 'Grid.ColumnSpan = "4" Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrush6}"/>-->
             End If
