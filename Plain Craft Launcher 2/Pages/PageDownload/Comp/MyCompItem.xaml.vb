@@ -69,11 +69,11 @@ Public Class MyCompItem
             PanTags.Visibility = If(value.Any(), Visibility.Visible, Visibility.Collapsed)
             For Each TagText In value
                 Dim NewTag = GetObjectFromXML(
-                "<corelocal:BlurBorder xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+                "<Border xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
                          Background=""#11000000"" Padding=""3,1"" CornerRadius=""3"" Margin=""0,0,3,0"" 
                          SnapsToDevicePixels=""True"" UseLayoutRounding=""False"">
                    <TextBlock Text=""" & TagText & """ Foreground=""#868686"" FontSize=""11"" />
-                </corelocal:BlurBorder>")
+                </Border>")
                 PanTags.Children.Add(NewTag)
             Next
         End Set
