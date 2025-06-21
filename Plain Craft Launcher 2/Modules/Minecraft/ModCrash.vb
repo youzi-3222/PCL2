@@ -894,13 +894,14 @@ NextStack:
                         Select Case FileName
                             Case "LatestLaunch.bat"
                                 FileName = "启动脚本.bat"
-                            Case "Log-CE1.log"
-                                FileName = "PCL 启动器日志.txt"
-                                FileEncoding = Encoding.UTF8
                             Case "RawOutput.log"
                                 FileName = "游戏崩溃前的输出.txt"
                                 FileEncoding = Encoding.UTF8
                         End Select
+                        If Core.Helper.LogWrapper.CurrentLogger.LogFiles.Last() = FileName Then
+                            FileName = "PCL 启动器日志.txt"
+                            FileEncoding = Encoding.UTF8
+                        End If
                         If File.Exists(OutputFile) Then
                             If FileEncoding Is Nothing Then FileEncoding = GetEncoding(ReadFileBytes(OutputFile))
                             Dim FileContent As String = ReadFile(OutputFile, FileEncoding)

@@ -477,7 +477,7 @@
                     Analyzer.Prepare()
                     Analyzer.Analyze(Version)
                     Analyzer.Output(False, New List(Of String) From
-                        {Version.Path & Version.Name & ".json", Path & "PCL\Log-CE1.log", Path & "PCL\LatestLaunch.bat"})
+                        {Version.Path & Version.Name & ".json", Core.Helper.LogWrapper.CurrentLogger.LogFiles.Last(), Path & "PCL\LatestLaunch.bat"})
                 Catch ex As Exception
                     Log(ex, "崩溃分析失败", LogLevel.Feedback)
                 End Try
