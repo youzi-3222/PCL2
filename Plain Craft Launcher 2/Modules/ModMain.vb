@@ -61,8 +61,8 @@ Public Module ModMain
                 '超量提示直接忽略
                 If FrmMain.PanHint.Children.Count >= 20 Then GoTo EndHint
                 '检查是否有重复提示
-                Dim DoubleStack As BlurBorder = Nothing
-                For Each stack As BlurBorder In FrmMain.PanHint.Children
+                Dim DoubleStack As Border = Nothing
+                For Each stack As Border In FrmMain.PanHint.Children
                     If stack.Tag(0) AndAlso CType(stack.Child, TextBlock).Text = CurrentHint.Text Then DoubleStack = stack
                 Next
                 '获取渐变颜色
@@ -104,7 +104,7 @@ Public Module ModMain
                     End If
                 Else
                     '准备控件
-                    Dim NewHintControl As New BlurBorder With {.Tag = {True, GetUuid()}, .Margin = New Thickness(-70, 0, 20, 0), .Opacity = 0, .Height = 0, .HorizontalAlignment = HorizontalAlignment.Left, .CornerRadius = New CornerRadius(0, 6, 6, 0)}
+                    Dim NewHintControl As New Border With {.Tag = {True, GetUuid()}, .Margin = New Thickness(-70, 0, 20, 0), .Opacity = 0, .Height = 0, .HorizontalAlignment = HorizontalAlignment.Left, .CornerRadius = New CornerRadius(0, 6, 6, 0)}
                     NewHintControl.Background = New LinearGradientBrush(New GradientStopCollection(New List(Of GradientStop) From {
                         New GradientStop(TargetColor0 * Percent + New MyColor(255, 255, 255) * (1 - Percent), 0),
                         New GradientStop(TargetColor1 * Percent + New MyColor(255, 255, 255) * (1 - Percent), 1)}), 90)
@@ -636,11 +636,11 @@ EndHint:
                     End If
                     Log("[Help] 已扫描 PCL 文件夹下的帮助文件，目前总计 " & FileList.Count & " 条")
                     '读取自带文件
-                    For Each File In EnumerateFiles(PathTemp & "CE\Help")
+                    For Each File In EnumerateFiles(PathHelpFolder)
                         '跳过非 Json 文件与以 . 开头的文件夹
-                        If File.Extension.ToLower <> ".json" OrElse File.Directory.FullName.Replace(PathTemp & "Help", "").Contains("\.") Then Continue For
+                        If File.Extension.ToLower <> ".json" OrElse File.Directory.FullName.Replace(PathHelpFolder.TrimEnd("\"c), "").Contains("\.") Then Continue For
                         '检查忽略列表
-                        Dim RealPath As String = File.FullName.Replace(PathTemp & "Help\", "")
+                        Dim RealPath As String = File.FullName.Replace(PathHelpFolder.TrimEnd("\"c), "")
                         For Each Ignore In IgnoreList
                             If RegexCheck(RealPath, Ignore) Then
                                 If ModeDebug Then Log("[Help] 已忽略 " & RealPath & "：" & Ignore)
