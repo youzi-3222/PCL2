@@ -348,7 +348,7 @@ Public Module ModLocalComp
                 If LogoFile IsNot Nothing Then
                     Dim LogoItem As ZipArchiveEntry = Jar.GetEntry(LogoFile)
                     If LogoItem IsNot Nothing Then
-                        Logo = $"{PathTemp}MyImage\{RandomInteger(0, 10000000)}.png"
+                        Logo = $"{PathTemp}MyImage\{GetStringMD5(LogoItem.Length.ToString & LogoItem.CompressedLength.ToString & Path)}.png"
                         Using EntryStream As Stream = LogoItem.Open()
                             Using FileStream As FileStream = File.Create(Logo)
                                 EntryStream.CopyTo(FileStream)
@@ -417,7 +417,7 @@ GotFabric:
                     If LogoFile IsNot Nothing Then
                         Dim LogoItem As ZipArchiveEntry = Jar.GetEntry(LogoFile)
                         If LogoItem IsNot Nothing Then
-                            Logo = $"{PathTemp}MyImage\{RandomInteger(0, 10000000)}.png"
+                            Logo = $"{PathTemp}MyImage\{GetStringMD5(LogoItem.Length.ToString & LogoItem.CompressedLength.ToString & Path)}.png"
                             Using EntryStream As Stream = LogoItem.Open()
                                 Using FileStream As FileStream = File.Create(Logo)
                                     EntryStream.CopyTo(FileStream)
@@ -475,7 +475,7 @@ GotFabric:
                     If LogoFile IsNot Nothing Then
                         Dim LogoItem As ZipArchiveEntry = Jar.GetEntry(LogoFile)
                         If LogoItem IsNot Nothing Then
-                            Logo = $"{PathTemp}MyImage\{RandomInteger(0, 10000000)}.png"
+                            Logo = $"{PathTemp}MyImage\{GetStringMD5(LogoItem.Length.ToString & LogoItem.CompressedLength.ToString & Path)}.png"
                             Using EntryStream As Stream = LogoItem.Open()
                                 Using FileStream As FileStream = File.Create(Logo)
                                     EntryStream.CopyTo(FileStream)
