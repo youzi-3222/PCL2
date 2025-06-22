@@ -536,34 +536,54 @@ Public Class PageOtherTest
     '今日人品
     Private Sub BtnLuck_Click(sender As Object, e As MouseButtonEventArgs)
         Dim result = GetDailyLuckValue()
-        Dim currentDate = DateTime.Now.ToString("yyyy/MM/dd")
-        If (result.LuckValue >= 60) Then
-            MyMsgBox($"你今天的人品值是：{result.LuckValue}！{result.Rating}", $"今日人品 - {currentDate}")
-        Else
-            MyMsgBox($"你今天的人品值是：{result.LuckValue}... {result.Rating}", $"今日人品 - {currentDate}", IsWarn:=result.LuckValue <= 30)
-        End If
-
+        Dim currentDate = DateTime.Now.ToString("yyyy年MM月dd日")
+        MyMsgBox($"你今天的人品值是：{result.LuckValue}  {result.Rating}", $"今日人品 - {currentDate}")
     End Sub
 
     Private Function GetDailyLuckValue() As (LuckValue As Integer, Rating As String)
         Dim seed = GenerateDailySeed()
-        Dim random As New Random(seed.GetHashCode)
+        Dim random As New Random(seed)
         Dim luckValue = random.Next(0, 101)
         Dim rating = GetRating(luckValue)
 
         Return (luckValue, rating)
     End Function
 
-    Private Function GenerateDailySeed() As String
+    Private Function GenerateDailySeed() As Integer
         ' 日期
         Dim today = Date.Today
         Dim datePart = today.Year * 10000 + today.Month * 100 + today.Day
-        Return datePart & SecretGetRawCode()
+        Dim machinePart = GetMachineHash()
+        Return datePart Xor machinePart
+    End Function
+
+    Private Function GetMachineHash() As Integer
+        Try
+            Dim identifiers As New List(Of String)
+
+            ' CPU ID
+            Using searcher As New ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor")
+                For Each mo As ManagementObject In searcher.Get()
+                    identifiers.Add(mo("ProcessorId").ToString())
+                    Exit For ' 只取第一个CPU
+                Next
+            End Using
+
+            ' 计算组合哈希值
+            If identifiers.Count > 0 Then
+                Dim combined = String.Join("|", identifiers)
+                Return Math.Abs(combined.GetHashCode())
+            End If
+        Catch ex As Exception
+            Return Environment.MachineName.GetHashCode()
+        End Try
+        Return Guid.NewGuid().GetHashCode()
     End Function
 
     Private Function GetRating(luckValue As Integer) As String
         If luckValue = 100 Then
-            Return "！100！100！\n 隐藏主题 欧皇彩...(不对，社区版没这玩意）"
+            Hint("隐藏主题 欧皇彩...(不对，社区版没这玩意）")
+            Return "欧皇！"
         Else
             Return If(luckValue >= 95, "差一点就到100了呢...",
            If(luckValue >= 90, "好评如潮！",
