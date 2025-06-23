@@ -71,9 +71,10 @@ Public Module ModWorld
                     Return False
                 End If
                 '读取 NBT 数据
-                Dim reader As NbtReader = VbNbtReaderCreator.FromPath(LevelDatPath, True)
-                Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
-                reader.Dispose()
+                Dim rootTag As XElement
+                Using reader As NbtReader = VbNbtReaderCreator.FromPath(LevelDatPath, True)
+                    rootTag = reader.ReadNbtAsXml(NbtType.TCompound)
+                End Using
 
                 Dim versionTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Version']")
                 If versionTag Is Nothing Then
