@@ -71,22 +71,17 @@ Public Module ModWorld
                     Return False
                 End If
                 '读取 NBT 数据
-                Using reader As NbtReader = VbNbtReaderCreator.FromPath(LevelDatPath, True)
-                    Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
+                Dim reader As NbtReader = VbNbtReaderCreator.FromPath(LevelDatPath, True)
+                Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
+                reader.Dispose()
 
-                    If rootTag Is Nothing Then
-                        Log("[World] 根标签存在问题，读取失败")
-                        Return False
-                    End If
-
-                    Dim versionTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Version']")
-                    If versionTag Is Nothing Then
-                        Log("[World] Version 标签存在问题，读取失败")
-                        Return False
-                    End If
-                    VersionName = versionTag.Elements("TString").FirstOrDefault(Function(e) e.Attribute("Name")?.Value = "Name")
-                    VersionId = versionTag.Elements("TInt32").FirstOrDefault(Function(e) e.Attribute("Name")?.Value = "Id")
-                End Using
+                Dim versionTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Version']")
+                If versionTag Is Nothing Then
+                    Log("[World] Version 标签存在问题，读取失败")
+                    Return False
+                End If
+                VersionName = rootTag.XPathSelectElement("//TCompound[@Name='Version']/TString[@Name='Name']")
+                VersionId = rootTag.XPathSelectElement("//TCompound[@Name='Version']/TInt32[@Name='Id']")
 
                 Return True
             Catch ex As Exception
