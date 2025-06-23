@@ -1,4 +1,5 @@
-﻿Imports System.IO.Compression
+﻿Imports System.Xml.XPath
+Imports PlainNamedBinaryTag
 
 Public Module ModWorld
 
@@ -54,9 +55,9 @@ Public Module ModWorld
             If Not SavePath.EndsWithF("\") Then SavePath = SavePath & "\"
             Me.SavePath = SavePath
         End Sub
-        Public ReadOnly Property LevelDatPath
+        Public ReadOnly Property LevelDatPath As String
             Get
-                Return SavePath & "level.dat"
+                Return If(File.Exists(SavePath & "level.dat"), SavePath & "level.dat", SavePath & "level.dat_old")
             End Get
         End Property
         ''' <summary>
@@ -69,158 +70,29 @@ Public Module ModWorld
                     Log("[World] 存档没有 level.dat 文件，读取失败")
                     Return False
                 End If
-                Using fileStream As FileStream = File.OpenRead(LevelDatPath)
-                    Using gzipStream As New GZipStream(fileStream, CompressionMode.Decompress)
-                        '读取 NBT 数据
-                        Dim reader As New NbtReader(gzipStream)
-                        Dim rootTag As Dictionary(Of String, Object) = reader.ReadTag().Value
+                '读取 NBT 数据
+                Using reader As NbtReader = VbNbtReaderCreator.FromPath(LevelDatPath, True)
+                    Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
 
-                        If rootTag Is Nothing OrElse Not rootTag.ContainsKey("Data") Then
-                            Log("[World] 根 NBT 标签存在问题，读取失败")
-                            Return False
-                        End If
-                        Dim dataTag As Dictionary(Of String, Object) = rootTag("Data")
+                    If rootTag Is Nothing Then
+                        Log("[World] 根标签存在问题，读取失败")
+                        Return False
+                    End If
 
-                        If dataTag.ContainsKey("Version") Then
-                            Dim versionTag As Dictionary(Of String, Object) = dataTag("Version")
-                            If versionTag.ContainsKey("Name") Then VersionName = versionTag("Name").ToString()
-                            If versionTag.ContainsKey("Id") Then VersionId = versionTag("Id").ToString()
-                        End If
-
-                        Return True
-                    End Using
+                    Dim versionTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Version']")
+                    If versionTag Is Nothing Then
+                        Log("[World] Version 标签存在问题，读取失败")
+                        Return False
+                    End If
+                    VersionName = versionTag.Elements("TString").FirstOrDefault(Function(e) e.Attribute("Name")?.Value = "Name")
+                    VersionId = versionTag.Elements("TInt32").FirstOrDefault(Function(e) e.Attribute("Name")?.Value = "Id")
                 End Using
+
+                Return True
             Catch ex As Exception
                 Log(ex, "读取存档时出错")
                 Return False
             End Try
-        End Function
-    End Class
-#End Region
-
-#Region "NBT 读取"
-    Public Class NbtReader
-        Private ReadOnly stream As Stream
-
-        Public Sub New(stream As Stream)
-            Me.stream = stream
-        End Sub
-
-        Public Function ReadTag() As KeyValuePair(Of String, Object)
-            Dim tagType As Byte = ReadByte()
-            If tagType = 0 Then Return Nothing
-            Dim length As Short = ReadShort()
-            Dim key(length - 1) As Byte
-            stream.Read(key, 0, length)
-            Return New KeyValuePair(Of String, Object)(Encoding.ASCII.GetString(key), ReadObject(tagType))
-        End Function
-        Public Function ReadObject(tagType As Byte) As Object
-            If tagType = 0 Then Return Nothing
-
-            Select Case tagType
-                Case 1 ' TAG_Byte
-                    Return ReadByte()
-                Case 2 ' TAG_Short
-                    Return ReadShort()
-                Case 3 ' TAG_Int
-                    Return ReadInt()
-                Case 4 ' TAG_Long
-                    Return ReadLong()
-                Case 5 ' TAG_Float
-                    Return ReadFloat()
-                Case 6 ' TAG_Double
-                    Return ReadDouble()
-                Case 7 ' TAG_Byte_Array
-                    Dim arrayLength As Integer = ReadInt()
-                    Dim bytes(arrayLength - 1) As Byte
-                    stream.Read(bytes, 0, arrayLength)
-                    Return bytes
-                Case 8 ' TAG_String
-                    Dim stringLength As Short = ReadShort()
-                    Dim bytes(stringLength - 1) As Byte
-                    stream.Read(bytes, 0, stringLength)
-                    Return Encoding.UTF8.GetString(bytes)
-                Case 9 ' TAG_List
-                    Dim listType As Byte = stream.ReadByte()
-                    Dim listLength As Integer = ReadInt()
-                    Dim list As New List(Of Object)
-
-                    For i As Integer = 0 To listLength - 1
-                        list.Append(ReadObject(listType))
-                    Next
-
-                    Return list
-                Case 10 ' TAG_Compound
-                    Dim compound As New List(Of KeyValuePair(Of String, Object))
-                    Dim currentTag As KeyValuePair(Of String, Object)
-                    Do
-                        currentTag = ReadTag()
-                        If currentTag.Value IsNot Nothing Then
-                            compound.Add(currentTag)
-                        End If
-                    Loop While currentTag.Value IsNot Nothing
-
-                    Return compound.ToDictionary(Function(x) x.Key, Function(x) x.Value)
-                Case 11 ' TAG_Int_Array
-                    Dim arrayLength As Integer = ReadInt()
-                    Dim ints(arrayLength - 1) As Integer
-
-                    For i As Integer = 0 To arrayLength - 1
-                        ints(i) = ReadInt()
-                    Next
-
-                    Return ints
-                Case 12 ' TAG_Long_Array
-                    Dim arrayLength As Integer = ReadInt()
-                    Dim longs(arrayLength - 1) As Integer
-
-                    For i As Integer = 0 To arrayLength - 1
-                        longs(i) = ReadLong()
-                    Next
-
-                    Return longs
-                Case Else
-                    Throw New NotSupportedException("未知的 NBT 标签类型: " & tagType)
-            End Select
-        End Function
-
-        Private Function ReadByte() As Byte
-            Return stream.ReadByte()
-        End Function
-
-        Private Function ReadShort() As Short
-            Dim bytes(1) As Byte
-            stream.Read(bytes, 0, 2)
-            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
-            Return BitConverter.ToInt16(bytes, 0)
-        End Function
-
-        Private Function ReadInt() As Integer
-            Dim bytes(3) As Byte
-            stream.Read(bytes, 0, 4)
-            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
-            Return BitConverter.ToInt32(bytes, 0)
-        End Function
-
-        Private Function ReadLong() As Long
-            Dim bytes(7) As Byte
-            stream.Read(bytes, 0, 8)
-            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
-            Return BitConverter.ToInt64(bytes, 0)
-        End Function
-
-        Private Function ReadFloat() As Single
-            Dim bytes(3) As Byte
-            stream.Read(bytes, 0, 4)
-            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
-            Return BitConverter.ToSingle(bytes, 0)
-        End Function
-
-        Private Function ReadDouble() As Double
-            Dim bytes(7) As Byte
-            stream.Read(bytes, 0, 8)
-            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
-            Return BitConverter.ToDouble(bytes, 0)
         End Function
     End Class
 #End Region
