@@ -3179,7 +3179,7 @@ Retry:
         Dim ExFull As String = Desc & "：" & GetExceptionDetail(Ex)
 
         '输出日志
-        LogWrapper.Error(Ex, Desc)
+        LogWrapper.Error(Ex, Desc, ErrorLevel.Feedback)
 
         If IsProgramEnded Then Return
 
