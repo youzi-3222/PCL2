@@ -436,7 +436,7 @@ Public Class FormMain
         Log("[System] 程序已退出，返回值：" & GetStringFromEnum(ReturnCode))
         'If ReturnCode <> ProcessReturnValues.Success Then Environment.Exit(ReturnCode)
         'Process.GetCurrentProcess.Kill()
-        Application.Current.Shutdown(ReturnCode) '龙猫你退出程序就不能文雅一点吗
+        Lifecycle.ForceShutdown(ReturnCode)
     End Sub
     Private Sub BtnTitleClose_Click(sender As Object, e As RoutedEventArgs) Handles BtnTitleClose.Click
         EndProgram(True)
