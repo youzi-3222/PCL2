@@ -1,7 +1,6 @@
 Imports System.ComponentModel
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
-Imports PCL.Core.Helper
 Imports PCL.Core.LifecycleManagement
 
 Public Class FormMain

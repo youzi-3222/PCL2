@@ -1,6 +1,4 @@
-﻿Imports System.Drawing
-Imports System.Reflection
-Imports System.Windows.Threading
+﻿Imports System.Windows.Threading
 Imports System.IO.Compression
 Imports PCL.Core.LifecycleManagement
 
@@ -21,7 +19,7 @@ Public Class Application
 
     Public Sub New()
         '注册生命周期事件
-        Lifecycle.When(LifecycleState.Loading, AddressOf Application_Startup)
+        Lifecycle.When(LifecycleState.Loaded, AddressOf Application_Startup)
     End Sub
 
     '开始
