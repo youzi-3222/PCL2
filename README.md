@@ -19,8 +19,7 @@
 [帮助文档库](https://github.com/PCL-Community/PCL2CEHelp)
 
 [提交问题](https://github.com/PCL-Community/PCL2-CE/issues/new/choose) |
-[贡献指南](https://github.com/PCL-Community/PCL2-CE/blob/dev/CONTRIBUTING.md) |
-[更新日志](https://github.com/PCL-Community/PCL2-CE/blob/dev/CHANGELOG.md)
+[贡献指南](https://github.com/PCL-Community/PCL2-CE/blob/dev/CONTRIBUTING.md)
 
 </div>
 
