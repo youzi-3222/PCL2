@@ -167,6 +167,7 @@ Public Class ModSetup
         {"UiHiddenVersionMod", New SetupEntry(False)},
         {"UiHiddenVersionResourcePack", New SetupEntry(False)},
         {"UiHiddenVersionShader", New SetupEntry(False)},
+        {"UiHiddenVersionSchematic", New SetupEntry(False)},
         {"UiAniFPS", New SetupEntry(59, Source:=SetupSource.Registry)},
         {"UiFont", New SetupEntry("")},
         {"VersionAdvanceJvm", New SetupEntry("", Source:=SetupSource.Version)},
@@ -855,6 +856,9 @@ Public Class ModSetup
         PageSetupUI.HiddenRefresh()
     End Sub
     Public Sub UiHiddenVersionShader(Value As Boolean)
+        PageSetupUI.HiddenRefresh()
+    End Sub
+    Public Sub UiHiddenVersionSchematic(Value As Boolean)
         PageSetupUI.HiddenRefresh()
     End Sub
 
