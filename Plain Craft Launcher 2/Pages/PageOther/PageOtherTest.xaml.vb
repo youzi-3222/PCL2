@@ -493,7 +493,7 @@ Public Class PageOtherTest
                                            Else
                                                Dim defaultImage As New BitmapImage()
                                                defaultImage.BeginInit()
-                                               defaultImage.UriSource = New Uri("pack://application:,,,/Plain Craft Launcher 2;component/Images/icon.ico")
+                                               defaultImage.UriSource = New Uri("pack://application:,,,/Plain Craft Launcher 2;component/Images/Icons/DefaultServer.png")
                                                defaultImage.EndInit()
                                                ImgServerLogo.Source = defaultImage
                                            End If
