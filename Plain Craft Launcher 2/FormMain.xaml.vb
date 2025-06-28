@@ -983,7 +983,8 @@ Public Class FormMain
         VersionShader = 8
         VersionSchematic = 9
         VersionInstall = 10
-        VersionSavesBackup = 0
+        VersionSavesInfo = 0
+        VersionSavesBackup = 1
     End Enum
     ''' <summary>
     ''' 获取次级页面的名称。若并非次级页面则返回空字符串，故可以以此判断是否为次级页面。
