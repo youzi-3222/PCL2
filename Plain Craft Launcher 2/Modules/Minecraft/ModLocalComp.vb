@@ -1,5 +1,9 @@
 Imports System.IO.Compression
 
+Imports PlainNamedBinaryTag
+Imports System.Xml.Linq
+Imports System.Xml.XPath
+
 Public Module ModLocalComp
     Private Const LocalModCacheVersion As Integer = 7
 
@@ -11,6 +15,29 @@ Public Module ModLocalComp
         ''' 资源的文件的地址。
         ''' </summary>
         Public ReadOnly Path As String
+        
+        ''' <summary>
+        ''' 是否为文件夹项。
+        ''' </summary>
+        Public ReadOnly Property IsFolder As Boolean
+            Get
+                Return Path.EndsWithF("\__FOLDER__", True)
+            End Get
+        End Property
+        
+        ''' <summary>
+        ''' 获取实际的文件夹路径（去除 __FOLDER__ 标记）。
+        ''' </summary>
+        Public ReadOnly Property ActualPath As String
+            Get
+                If IsFolder Then
+                    Return Path.Replace("\__FOLDER__", "")
+                Else
+                    Return Path
+                End If
+            End Get
+        End Property
+        
         Public Sub New(Path As String)
             Me.Path = If(Path, "")
         End Sub
@@ -28,7 +55,11 @@ Public Module ModLocalComp
         ''' </summary>
         Public ReadOnly Property FileName As String
             Get
-                Return GetFileNameFromPath(Path)
+                If IsFolder AndAlso Not String.IsNullOrEmpty(Name) Then
+                    Return Name
+                Else
+                    Return GetFileNameFromPath(Path)
+                End If
             End Get
         End Property
 
@@ -73,7 +104,13 @@ Public Module ModLocalComp
             Get
                 If _Name Is Nothing Then Load()
                 If _Name Is Nothing Then _Name = _ModId
-                If _Name Is Nothing Then _Name = GetFileNameWithoutExtentionFromPath(Path)
+                If _Name Is Nothing Then
+                    If IsFolder Then
+                        _Name = GetFolderNameFromPath(ActualPath)
+                    Else
+                        _Name = GetFileNameWithoutExtentionFromPath(Path)
+                    End If
+                End If
                 Return _Name
             End Get
             Set(value As String)
@@ -175,6 +212,36 @@ Public Module ModLocalComp
             End Set
         End Property
         Private _Authors As String = Nothing
+
+        ''' <summary>
+        ''' Litematic 文件的创建时间戳。
+        ''' </summary>
+        Public Property LitematicTimeCreated As Long?
+        
+        ''' <summary>
+        ''' Litematic 文件的修改时间戳。
+        ''' </summary>
+        Public Property LitematicTimeModified As Long?
+        
+        ''' <summary>
+        ''' Litematic 文件的包围盒大小。
+        ''' </summary>
+        Public Property LitematicEnclosingSize As String
+        
+        ''' <summary>
+        ''' Litematic 文件的区域数量。
+        ''' </summary>
+        Public Property LitematicRegionCount As Integer?
+        
+        ''' <summary>
+        ''' Litematic 文件的总方块数。
+        ''' </summary>
+        Public Property LitematicTotalBlocks As Integer?
+        
+        ''' <summary>
+        ''' Litematic 文件的总体积。
+        ''' </summary>
+        Public Property LitematicTotalVolume As Integer?
 
         ''' <summary>
         ''' Mod 图标路径。
@@ -294,6 +361,19 @@ Public Module ModLocalComp
                 IsLoaded = True
                 Return
             End If
+            
+            '对于文件夹项，检查实际文件夹路径是否存在
+            If IsFolder Then
+                If Not Directory.Exists(ActualPath) Then
+                    _FileUnavailableReason = New DirectoryNotFoundException("未找到文件夹（" & ActualPath & "）")
+                    IsLoaded = True
+                    Return
+                End If
+                '文件夹项不需要进一步处理
+                IsLoaded = True
+                Return
+            End If
+            
             If Not File.Exists(Path) Then 
                 _FileUnavailableReason = New FileNotFoundException("未找到资源文件（" & Path & "）")
                 IsLoaded = True
@@ -305,6 +385,11 @@ Public Module ModLocalComp
                 Try
                     _Name = GetFileNameWithoutExtentionFromPath(Path)
                     _Description = "投影原理图（结构）文件"
+                    
+                    ' 对于 .litematic 文件，尝试读取 NBT 数据
+                    If Path.EndsWithF(".litematic", True) Then
+                        LoadLitematicNbtData()
+                    End If
                 Catch ex As Exception
                     Log(ex, "投影文件信息获取失败（" & Path & "）", LogLevel.Developer)
                     _FileUnavailableReason = ex
@@ -924,7 +1009,106 @@ Finished:
             Return PathImage & "Icons/NoIcon.png"
         End Function
 
+        ''' <summary>
+        ''' 读取 Litematic 文件的 NBT 数据。
+        ''' </summary>
+        Private Sub LoadLitematicNbtData()
+            Try
+                Log($"[Litematic] 开始读取 NBT 数据：{Path}", LogLevel.Developer)
+                Using reader As NbtReader = VbNbtReaderCreator.FromPath(Path, True)
+                    Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
+                    Log($"[Litematic] 成功解析 NBT 根节点", LogLevel.Developer)
+                    
+                    ' 输出完整的 NBT 结构用于调试
+                    Log($"[Litematic] NBT 结构：{rootTag.ToString()}", LogLevel.Developer)
+                    
+                    ' 读取 Metadata 节点
+                    Dim metadataTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']")
+                    If metadataTag IsNot Nothing Then
+                        Log($"[Litematic] 找到 Metadata 节点", LogLevel.Developer)
+                        ' 读取时间信息
+                        Dim timeCreatedTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TInt64[@Name='TimeCreated']")
+                        If timeCreatedTag IsNot Nothing Then
+                            LitematicTimeCreated = CLng(timeCreatedTag.Value)
+                        End If
+                        
+                        Dim timeModifiedTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TInt64[@Name='TimeModified']")
+                        If timeModifiedTag IsNot Nothing Then
+                            LitematicTimeModified = CLng(timeModifiedTag.Value)
+                        End If
+                        
+                        ' 读取包围盒大小
+                        Dim enclosingSizeTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TCompound[@Name='EnclosingSize']")
+                        If enclosingSizeTag IsNot Nothing Then
+                            Dim xTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TCompound[@Name='EnclosingSize']/TInt32[@Name='x']")
+                            Dim yTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TCompound[@Name='EnclosingSize']/TInt32[@Name='y']")
+                            Dim zTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TCompound[@Name='EnclosingSize']/TInt32[@Name='z']")
+                            If xTag IsNot Nothing AndAlso yTag IsNot Nothing AndAlso zTag IsNot Nothing Then
+                                LitematicEnclosingSize = $"{xTag.Value} × {yTag.Value} × {zTag.Value}"
+                            End If
+                        End If
+                        
+                        ' 读取描述信息
+                        Dim descriptionTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TString[@Name='Description']")
+                        If descriptionTag IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(descriptionTag.Value) Then
+                            _Description = descriptionTag.Value
+                        End If
+                        
+                        ' 读取区域数量
+                        Dim regionCountTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TInt32[@Name='RegionCount']")
+                        If regionCountTag IsNot Nothing Then
+                            LitematicRegionCount = CInt(regionCountTag.Value)
+                        End If
+                        
+                        ' 读取总方块数
+                        Dim totalBlocksTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TInt32[@Name='TotalBlocks']")
+                        If totalBlocksTag IsNot Nothing Then
+                            LitematicTotalBlocks = CInt(totalBlocksTag.Value)
+                        End If
+                        
+                        ' 读取作者信息
+                        Dim authorTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TString[@Name='Author']")
+                        If authorTag IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(authorTag.Value) Then
+                            _Authors = authorTag.Value
+                        End If
+                        
+                        ' 读取总体积
+                        Dim totalVolumeTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TInt32[@Name='TotalVolume']")
+                        If totalVolumeTag IsNot Nothing Then
+                            LitematicTotalVolume = CInt(totalVolumeTag.Value)
+                        End If
+                        
+                        ' 读取名称
+                        Dim nameTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']/TString[@Name='Name']")
+                        If nameTag IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(nameTag.Value) AndAlso nameTag.Value <> "Unnamed" Then
+                            _Name = nameTag.Value
+                        End If
+                        
+                        Log($"[Litematic] NBT 数据读取完成", LogLevel.Developer)
+                    Else
+                        Log($"[Litematic] 未找到 Metadata 节点", LogLevel.Developer)
+                    End If
+                End Using
+            Catch ex As Exception
+                ' 如果读取失败，记录日志但不影响基本功能
+                Log(ex, "读取 Litematic NBT 数据时出错（" & Path & "）", LogLevel.Developer)
+            End Try
+        End Sub
+
     End Class
+
+    ''' <summary>
+    ''' 获取文件夹描述信息。
+    ''' </summary>
+    Private Function GetFolderDescription(FolderPath As String) As String
+        Try
+            If Not Directory.Exists(FolderPath) Then Return "空文件夹"
+            Return "文件夹"
+        Catch ex As Exception
+            Log(ex, $"获取文件夹描述失败：{FolderPath}", LogLevel.Debug)
+            Return "文件夹"
+        End Try
+    End Function
 
     Public Class CompLocalLoaderData
         Public GameVersion As McVersion
@@ -961,17 +1145,53 @@ Finished:
             Dim ModFileList As New List(Of FileInfo)
             If Directory.Exists(Loader.Input.CompPath) Then
                 Dim RawName As String = Loader.Input.CompPath.ToLower
-                For Each File As FileInfo In EnumerateFiles(Loader.Input.CompPath)
-                    If File.DirectoryName.ToLower & "\" <> RawName Then
-                        '仅当 Forge 1.13- 且文件夹名与版本号相同时，才加载该子文件夹下的 Mod
-                        If Not (PageVersionLeft.Version IsNot Nothing AndAlso PageVersionLeft.Version.Version.HasForge AndAlso
-                                PageVersionLeft.Version.Version.McCodeMain < 13 AndAlso
-                                File.Directory.Name = $"1.{PageVersionLeft.Version.Version.McCodeMain}.{PageVersionLeft.Version.Version.McCodeSub}") Then
-                            Continue For
-                        End If
+                
+                '对于原理图类型，需要特殊处理文件夹显示
+                If Loader.Input.CompType = CompType.Schematic Then
+                    '获取当前文件夹路径
+                    Dim CurrentFolderPath As String = ""
+                    If Loader.Input.Frm IsNot Nothing Then
+                        CurrentFolderPath = Loader.Input.Frm.CurrentFolderPath
                     End If
-                    If LocalCompFile.IsCompFile(File.FullName, Loader.Input.CompType) Then ModFileList.Add(File)
-                Next
+                    
+                    Dim SearchPath As String = If(String.IsNullOrEmpty(CurrentFolderPath), Loader.Input.CompPath, CurrentFolderPath)
+                    
+                    '添加当前文件夹下的文件
+                    Try
+                        For Each File As FileInfo In New DirectoryInfo(SearchPath).EnumerateFiles("*", SearchOption.TopDirectoryOnly)
+                            Try
+                                If LocalCompFile.IsCompFile(File.FullName, Loader.Input.CompType) Then ModFileList.Add(File)
+                            Catch ex As Exception
+                                Log(ex, $"处理文件失败：{File.FullName}", LogLevel.Debug)
+                                '跳过有问题的文件，继续处理其他文件
+                            End Try
+                        Next
+                    Catch ex As Exception
+                        Log(ex, $"枚举文件失败：{SearchPath}")
+                    End Try
+                Else
+                    '其他类型保持原有逻辑
+                    Try
+                        For Each File As FileInfo In EnumerateFiles(Loader.Input.CompPath)
+                            Try
+                                If File.DirectoryName.ToLower & "\" <> RawName Then
+                                    '仅当 Forge 1.13- 且文件夹名与版本号相同时，才加载该子文件夹下的 Mod
+                                    If Not (PageVersionLeft.Version IsNot Nothing AndAlso PageVersionLeft.Version.Version.HasForge AndAlso
+                                            PageVersionLeft.Version.Version.McCodeMain < 13 AndAlso
+                                            File.Directory.Name = $"1.{PageVersionLeft.Version.Version.McCodeMain}.{PageVersionLeft.Version.Version.McCodeSub}") Then
+                                        Continue For
+                                    End If
+                                End If
+                                If LocalCompFile.IsCompFile(File.FullName, Loader.Input.CompType) Then ModFileList.Add(File)
+                            Catch ex As Exception
+                                Log(ex, $"处理文件失败：{File.FullName}", LogLevel.Debug)
+                                '跳过有问题的文件，继续处理其他文件
+                            End Try
+                        Next
+                    Catch ex As Exception
+                        Log($"[错误] 枚举文件失败：{Loader.Input.CompPath}，错误：{ex.Message}")
+                    End Try
+                End If
             End If
 
             '确定是否显示进度
@@ -999,6 +1219,38 @@ Finished:
             '加载 Mod 列表
             Dim ModList As New List(Of LocalCompFile)
             Dim ModUpdateList As New List(Of LocalCompFile)
+            
+            '对于原理图类型，在根目录时添加文件夹项
+            If Loader.Input.CompType = CompType.Schematic AndAlso Directory.Exists(Loader.Input.CompPath) Then
+                '获取当前文件夹路径
+                Dim CurrentFolderPath As String = ""
+                If Loader.Input.Frm IsNot Nothing Then
+                    CurrentFolderPath = Loader.Input.Frm.CurrentFolderPath
+                End If
+                
+                Dim SearchPath As String = If(String.IsNullOrEmpty(CurrentFolderPath), Loader.Input.CompPath, CurrentFolderPath)
+                
+                '只在根目录时显示子文件夹
+                If String.IsNullOrEmpty(CurrentFolderPath) Then
+                    Try
+                        For Each SubDir As DirectoryInfo In New DirectoryInfo(SearchPath).EnumerateDirectories("*", SearchOption.TopDirectoryOnly)
+                            Try
+                                '创建一个特殊的 LocalCompFile 来表示文件夹
+                                Dim FolderEntry As New LocalCompFile(SubDir.FullName & "\__FOLDER__")
+                                FolderEntry.Name = SubDir.Name
+                                FolderEntry.Description = GetFolderDescription(SubDir.FullName)
+                                ModList.Add(FolderEntry)
+                            Catch ex As Exception
+                                Log(ex, $"处理文件夹失败：{SubDir.FullName}", LogLevel.Debug)
+                                '跳过有问题的文件夹，继续处理其他文件夹
+                            End Try
+                        Next
+                    Catch ex As Exception
+                        Log(ex, $"枚举文件夹失败：{SearchPath}")
+                    End Try
+                End If
+            End If
+            
             For Each ModFile As FileInfo In ModFileList
                 Loader.Progress += 0.94 / ModFileList.Count
                 If Loader.IsAborted Then Return
