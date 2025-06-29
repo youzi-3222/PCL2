@@ -52,10 +52,10 @@ Class PageVersionSavesBackup
                                                    If MyMsgBox("确定要应用此备份吗？请确保当前的存档已完成备份或者十分确定不再使用！", Button1:="确定", Button2:="取消") = 2 Then Return
                                                    Hint("应用快照中，请勿执行其他操作！")
                                                    Dim loaders As New List(Of LoaderBase)
-                                                   loaders.Add(New LoaderTask(Of Integer, Integer)("搜寻并应用文件", Async Sub(load As LoaderTask(Of Integer, Integer))
+                                                   loaders.Add(New LoaderTask(Of Integer, Integer)("搜寻并应用文件", Sub(load As LoaderTask(Of Integer, Integer))
                                                                                                                   load.Progress = 0.2
                                                                                                                   Using snap As New SnapLiteVersionControl(PageVersionSavesLeft.CurrentSave)
-                                                                                                                      Await snap.ApplyPastVersion(item.NodeId)
+                                                                                                                      snap.ApplyPastVersion(item.NodeId).GetAwaiter().GetResult()
                                                                                                                   End Using
                                                                                                                   load.Progress = 1
                                                                                                               End Sub))
@@ -84,10 +84,10 @@ Class PageVersionSavesBackup
                                                     If String.IsNullOrEmpty(savePath) Then Return
                                                     Hint("快照导出中，请勿执行其他操作！")
                                                     Dim loaders As New List(Of LoaderBase)
-                                                    loaders.Add(New LoaderTask(Of Integer, Integer)("制作压缩包", Async Sub(load As LoaderTask(Of Integer, Integer))
+                                                    loaders.Add(New LoaderTask(Of Integer, Integer)("制作压缩包", Sub(load As LoaderTask(Of Integer, Integer))
                                                                                                                  load.Progress = 0.2
                                                                                                                  Using snap As New SnapLiteVersionControl(PageVersionSavesLeft.CurrentSave)
-                                                                                                                     Await snap.Export(item.NodeId, savePath)
+                                                                                                                     snap.Export(item.NodeId, savePath).GetAwaiter().GetResult()
                                                                                                                  End Using
                                                                                                                  load.Progress = 1
                                                                                                              End Sub))
@@ -139,10 +139,10 @@ Class PageVersionSavesBackup
             BtnCreate.IsEnabled = False
             Hint("开始备份任务，请勿执行其他操作！")
             Dim loaders As New List(Of LoaderBase)
-            loaders.Add(New LoaderTask(Of Integer, Integer)("搜寻并制作备份", Async Sub(load As LoaderTask(Of Integer, Integer))
+            loaders.Add(New LoaderTask(Of Integer, Integer)("搜寻并制作备份", Sub(load As LoaderTask(Of Integer, Integer))
                                                                            load.Progress = 0.2
                                                                            Using snap As New SnapLiteVersionControl(PageVersionSavesLeft.CurrentSave)
-                                                                               Await snap.CreateNewVersion(input)
+                                                                               snap.CreateNewVersion(input).GetAwaiter().GetResult()
                                                                            End Using
                                                                            load.Progress = 1
                                                                            RunInUi(Sub() RefreshList())
@@ -161,10 +161,10 @@ Class PageVersionSavesBackup
     Private Sub BtnClean_Click() Handles BtnClean.Click
         If MyMsgBox("此功能可以清理备份文件中已不再需要的文件，建议在发生备份删除后使用。", "确定使用吗？", "确定", "返回") = 2 Then Return
         Dim loaders As New List(Of LoaderBase)
-        loaders.Add(New LoaderTask(Of Integer, Integer)("寻找并清理备份文件", Async Sub(load As LoaderTask(Of Integer, Integer))
+        loaders.Add(New LoaderTask(Of Integer, Integer)("寻找并清理备份文件", Sub(load As LoaderTask(Of Integer, Integer))
                                                                          load.Progress = 0.2
                                                                          Using snap As New SnapLiteVersionControl(PageVersionSavesLeft.CurrentSave)
-                                                                             Await snap.CleanUnrecordObjects()
+                                                                             snap.CleanUnrecordObjects().GetAwaiter().GetResult()
                                                                          End Using
                                                                          load.Progress = 1
                                                                      End Sub))
