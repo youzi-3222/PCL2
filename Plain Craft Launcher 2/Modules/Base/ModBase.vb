@@ -3128,7 +3128,19 @@ Retry:
         '处理错误会导致再次调用 Log() 导致无限循环
 
         '输出日志
-        LogWrapper.Info(Text)
+        If {LogLevel.Msgbox, LogLevel.Hint}.Contains(Level) Then
+            LogWrapper.Warn(Text)
+        ElseIf LogLevel.Feedback = Level Then
+            LogWrapper.Error(Text)
+        ElseIf LogLevel.Critical = Level Then
+            LogWrapper.Fatal(Text)
+        ElseIf LogLevel.Debug = Level Then
+            LogWrapper.Debug(Text)
+        ElseIf LogLevel.Developer = Level Then
+            LogWrapper.Trace(Text)
+        Else
+            LogWrapper.Info(Text)
+        End If
 
         If IsProgramEnded OrElse Level = LogLevel.Normal Then Return
 
@@ -3183,7 +3195,19 @@ Retry:
         Dim ExFull As String = Desc & "：" & GetExceptionDetail(Ex)
 
         '输出日志
-        LogWrapper.Error(Ex, Desc)
+        If {LogLevel.Msgbox, LogLevel.Hint}.Contains(Level) Then
+            LogWrapper.Warn(Ex, Desc)
+        ElseIf LogLevel.Feedback = Level Then
+            LogWrapper.Error(Ex, Desc)
+        ElseIf LogLevel.Critical = Level Then
+            LogWrapper.Fatal(Ex, Desc)
+        ElseIf LogLevel.Debug = Level Then
+            LogWrapper.Debug($"{Desc}:{Ex}")
+        ElseIf LogLevel.Developer = Level Then
+            LogWrapper.Trace($"{Desc}:{Ex}")
+        Else
+            LogWrapper.Error(Ex, Desc)
+        End If
 
         If IsProgramEnded Then Return
 

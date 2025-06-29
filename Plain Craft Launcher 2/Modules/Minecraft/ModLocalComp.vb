@@ -1018,10 +1018,10 @@ Finished:
                 Using reader As NbtReader = VbNbtReaderCreator.FromPath(Path, True)
                     Dim rootTag As XElement = reader.ReadNbtAsXml(NbtType.TCompound)
                     Log($"[Litematic] 成功解析 NBT 根节点", LogLevel.Developer)
-                    
+
                     ' 输出完整的 NBT 结构用于调试
-                    Log($"[Litematic] NBT 结构：{rootTag.ToString()}", LogLevel.Developer)
-                    
+                    ' Log($"[Litematic] NBT 结构：{rootTag.ToString()}", LogLevel.Developer)
+
                     ' 读取 Metadata 节点
                     Dim metadataTag As XElement = rootTag.XPathSelectElement("//TCompound[@Name='Metadata']")
                     If metadataTag IsNot Nothing Then
