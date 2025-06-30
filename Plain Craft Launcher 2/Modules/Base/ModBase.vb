@@ -3338,7 +3338,7 @@ Retry:
     ''' 取随机整数。
     ''' </summary>
     Public Function RandomInteger(min As Integer, max As Integer) As Integer
-        Return Math.Floor((max - min + 1) * Random.NextDouble) + min
+        Return Math.Floor((max - min + 1) * Random.NextDouble()) + min
     End Function
 
     ''' <summary>
