@@ -86,7 +86,7 @@ Public Class UpdatesMinioModel '社区自己的更新系统格式
             Case UpdateChannel.stable
                 ChannelName += "sr"
             Case UpdateChannel.beta
-                ChannelName += "sr"
+                ChannelName += "fr"
             Case Else
                 ChannelName += "sr"
         End Select
