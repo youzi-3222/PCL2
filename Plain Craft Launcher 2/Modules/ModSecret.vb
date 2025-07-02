@@ -818,6 +818,12 @@ PCL-Community 及其成员与龙腾猫跃无从属关系，且均不会为您的
                                Loaders.AddRange(RemoteServer.GetDownloadLoader(
                                                 If(IsUpdBetaChannel, UpdateChannel.beta, UpdateChannel.stable),
                                                 If(IsArm64System, UpdateArch.arm64, UpdateArch.x64), DlTargetPath))
+                               Loaders.Add(New LoaderTask(Of Integer, Integer)("校验更新", Sub()
+                                                                                           Dim curHash = GetFileSHA256(DlTargetPath)
+                                                                                           If curHash <> version.SHA256 Then
+                                                                                               Throw New Exception($"更新文件 SHA256 不正确，应该为 {version.SHA256}，实际为 {curHash}")
+                                                                                           End If
+                                                                                       End Sub))
                                If Not Slient Then
                                    Loaders.Add(New LoaderTask(Of Integer, Integer)("安装更新", Sub() UpdateRestart(True)))
                                End If
