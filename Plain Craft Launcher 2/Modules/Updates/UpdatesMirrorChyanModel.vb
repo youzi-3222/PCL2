@@ -41,8 +41,10 @@ Public Class UpdatesMirrorChyanModel 'Mirror 酱的更新格式
         Dim loaders As New List(Of LoaderBase)
         loaders.Add(New LoaderTask(Of Integer, List(Of NetFile))("获取下载信息", Sub(load As LoaderTask(Of Integer, List(Of NetFile)))
                                                                                Dim ret As JObject = NetGetCodeByRequestRetry(GetUrl(channel, arch), IsJson:=True)
+                                                                               Dim dlUrl = ret("data")("url")?.ToString()
+                                                                               If dlUrl Is Nothing Then Throw New Exception("Mirror 酱下载源不可用")
                                                                                load.Output = New List(Of NetFile) From {
-                                                                                   New NetFile({ret("data")("url")}, output)
+                                                                                   New NetFile({dlUrl}, output)
                                                                                }
                                                                            End Sub))
         loaders.Add(New LoaderDownload("下载更新文件", New List(Of NetFile)))
