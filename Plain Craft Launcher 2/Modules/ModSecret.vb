@@ -590,7 +590,11 @@ PCL-Community 及其成员与龙腾猫跃无从属关系，且均不会为您的
             Return OriginalLight
         End If
     End Function
-    
+
+    Private ReadOnly HueList As Integer() = {200, 210, 225}
+    Private ReadOnly SatList As Integer() = {100, 85, 70}
+    Private ReadOnly LightList As Integer() = {7, 0, -2}
+
     Public Sub ThemeRefreshColor()
 #If DEBUG Then
         If EnableCustomTheme Then
@@ -598,21 +602,17 @@ PCL-Community 及其成员与龙腾猫跃无从属关系，且均不会为您的
             If CustomThemeSat IsNot Nothing Then ColorSat = CustomThemeSat
             If CustomThemeLight IsNot Nothing Then ColorLightAdjust = CustomThemeLight
             If CustomThemeHueDelta IsNot Nothing Then ColorHueTopbarDelta = CustomThemeHueDelta
-        ElseIf IsDarkMode Then
-#Else
-        If IsDarkMode Then
-#End If
-            ColorHue = 205
-            ColorSat = 90
-            ColorLightAdjust = 0
-            ColorHueTopbarDelta = 0
         Else
-            ColorHue = 210
-            ColorSat = 85
-            ColorLightAdjust = 0
+#End If
+            Dim colorIndex As Integer = If(IsDarkMode, Setup.Get("UiDarkColor"), Setup.Get("UiLightColor"))
+            ColorHue = HueList(colorIndex)
+            ColorSat = SatList(colorIndex)
+            ColorLightAdjust = LightList(colorIndex)
             ColorHueTopbarDelta = 0
+#If DEBUG Then
         End If
-        
+#End If
+
         Dim res = Application.Current.Resources
         StaticColors = If(IsDarkMode, DarkStaticColors, LightStaticColors)
         DynamicColors = New ThemeStyleDynamicColors(CurrentStyle, ColorHue, ColorSat, ColorLightAdjust)
