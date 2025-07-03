@@ -6,7 +6,7 @@ Imports System.Net.Sockets
 Imports Makaretu.Nat
 Imports STUN
 Imports System.Net.NetworkInformation
-Imports PCL.PageLinkNetStatus
+Imports PCL.Core.Helper
 
 Public Class ModLink
 
@@ -47,7 +47,7 @@ Public Class ModLink
                     ' 向服务器发送握手数据包
                     Using stream = client.GetStream()
                         If Not stream.CanWrite OrElse Not stream.CanRead Then Return Nothing
-                        Dim startTime = DateTime.Now '开始计时
+                        Dim latency As New Stopwatch
 
                         Dim handshake As Byte() = BuildHandshake(_IP, _Port)
                         Log($"[MCPing] Sending {String.Join(" ", handshake)}", LogLevel.Debug)
@@ -65,22 +65,9 @@ Public Class ModLink
                         Dim buffer(4096) As Byte
 
                         ' 读取varInt头部
-                        Dim packetLength As Integer = 0
-                        Dim bytesNeeded = 5
-                        Do
-                            Dim bytesRead = Await stream.ReadAsync(buffer, 0, Math.Min(buffer.Length, bytesNeeded))
-                            If bytesRead = 0 Then Exit Do
-
-                            Dim parseResult = ParseVarInt(buffer.Take(bytesRead).ToArray(), packetLength)
-                            If parseResult.Success Then
-                                bytesNeeded = parseResult.BytesNeeded
-                                If bytesNeeded = 0 Then Exit Do
-                            Else
-                                Exit Do
-                            End If
-                        Loop While bytesNeeded > 0
-                        Dim endTime = DateTime.Now '停止计时
-                        packetLength -= 3
+                        latency.Start()
+                        Dim packetLength = VarInt.ReadFromStream(stream)
+                        latency.Stop()
                         Log($"[MCPing] Got packet length ({packetLength})", LogLevel.Debug)
 
                         ' 读取剩余数据包
@@ -94,20 +81,19 @@ Public Class ModLink
                         Loop While totalBytes < packetLength
 
                         Log($"[MCPing] Received ({res.Count})", LogLevel.Debug)
-
                         Dim response As String = Encoding.UTF8.GetString(res.ToArray(), 0, res.Count)
                         Dim startIndex = response.IndexOf("{""", StringComparison.Ordinal)
                         If startIndex > 10 Then Return Nothing
                         response = response.Substring(startIndex)
                         Log("[MCPing] Server Response: " & response, LogLevel.Debug)
-                        
+
                         '查找并截取第一段 JSON
                         '有些 mod 或是整合包定制服务端会在返回的 JSON 后面添加新的内容，比如 Better MC
                         '这时候需要把第一段合法的 JSON 截出来，否则下面解析 JSON 会炸掉
                         '但是它们完全可以在返回的 JSON 内部添加自定义内容，添加在后面估计就是为了图 mixin 省事
                         '不守规范一时爽，第三方解析火葬场
                         Dim stack = 0, index = 0, stackStr = False, length = response.Length
-                        While index < length 
+                        While index < length
                             Select Case response(index)
                                 Case "\"c
                                     If stackStr Then index += 1
@@ -135,7 +121,7 @@ Public Class ModLink
                         .PlayerOnline = j("players")("online"),
                         .Favicon = If(j("favicon"), ""),
                         .Port = _Port,
-                        .Latency = Math.Round((endTime - startTime).TotalMilliseconds)
+                        .Latency = Math.Round(latency.ElapsedMilliseconds)
                         }
                         Dim descObj = j("description")
                         world.Description = ""
@@ -162,15 +148,15 @@ Public Class ModLink
         Function BuildHandshake(serverIp As String, serverPort As Integer) As Byte()
             ' 构建握手数据包
             Dim handshake As New List(Of Byte)
-            handshake.AddRange(GetVarInt(0)) ' 数据包 ID 握手包
-            handshake.AddRange(GetVarInt(578)) ' 协议
+            handshake.AddRange(VarInt.Encode(0)) ' 数据包 ID 握手包
+            handshake.AddRange(VarInt.Encode(578)) ' 协议
             Dim encodedIP = Encoding.UTF8.GetBytes(serverIp)
-            handshake.AddRange(GetVarInt(encodedIP.Length)) ' 服务器地址长度
+            handshake.AddRange(VarInt.Encode(CULng(encodedIP.Length))) ' 服务器地址长度
             handshake.AddRange(encodedIP) ' 服务器地址
             handshake.AddRange(BitConverter.GetBytes(CUShort(serverPort)).Reverse()) ' 服务器端口
-            handshake.AddRange(GetVarInt(1)) ' 下一个状态 获取服务器状态
+            handshake.AddRange(VarInt.Encode(1)) ' 下一个状态 获取服务器状态
 
-            handshake.InsertRange(0, GetVarInt(handshake.Count))
+            handshake.InsertRange(0, VarInt.Encode(CULng(handshake.Count)))
 
             Return handshake.ToArray()
         End Function
@@ -178,46 +164,9 @@ Public Class ModLink
         Function BuildStatusRequest() As Byte()
             ' 构建状态请求数据包
             Dim packet As New List(Of Byte)
-            packet.AddRange(GetVarInt(1))
-            packet.AddRange(GetVarInt(0))
+            packet.AddRange(VarInt.Encode(1))
+            packet.AddRange(VarInt.Encode(0))
             Return packet.ToArray() ' 状态请求数据包
-        End Function
-
-        Private Function ParseVarInt(bytes As Byte(), ByRef value As Integer) As (Success As Boolean, BytesNeeded As Integer, Value As Integer)
-            value = 0
-            Dim shift = 0
-            Dim index = 0
-
-            Do While index < bytes.Length
-                Dim b = bytes(index)
-                value = value Or (CInt(b And &H7F) << shift)
-                shift += 7
-                index += 1
-
-                If (b And &H80) = 0 Then
-                    Return (True, 0, value)
-                End If
-
-                If index >= 5 Then
-                    Return (False, 0, 0)
-                End If
-            Loop
-
-            Return (False, 5 - index, 0)
-        End Function
-
-        Private Function GetVarInt(value As Integer) As Byte()
-            If value < 0 Then Return {}
-            Dim result As New List(Of Byte)
-            Do
-                Dim temp As Byte = CByte(value And &H7F)
-                value >>= 7
-                If value <> 0 Then
-                    temp = temp Or &H80
-                End If
-                result.Add(temp)
-            Loop While value <> 0
-            Return result.ToArray()
         End Function
     End Class
 #End Region
