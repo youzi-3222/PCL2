@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
-using PCL.Core.Model.Mod.Modrinth;
+using PCL.Core.Model.ResourceProject.Modrinth;
 
 namespace PCL.Test.Project;
 
@@ -22,9 +22,9 @@ public class Modrinth
         ret.EnsureSuccessStatusCode();
         var s = await ret!.Content.ReadAsStreamAsync();
         Assert.IsNotNull(s);
-        var instance = (ModrinthProjectModel)(await JsonSerializer.DeserializeAsync(
+        var instance = (ModrinthProject)(await JsonSerializer.DeserializeAsync(
             s,
-            typeof(ModrinthProjectModel),
+            typeof(ModrinthProject),
             JsonSerializerOptions.Web) ?? throw new NullReferenceException());
         Assert.AreEqual("sodium", instance.slug);
     }
