@@ -2858,6 +2858,11 @@ Retry:
         Return Raw
     End Function
 
+    Public Function GetResourceStream(path As String) As Stream
+        Dim resourceInfo = Application.GetResourceStream(New Uri($"pack://application:,,,/{path}", UriKind.Absolute))
+        Return resourceInfo?.Stream
+    End Function
+
 #End Region
 
 #Region "UI"
@@ -3338,7 +3343,7 @@ Retry:
     ''' 取随机整数。
     ''' </summary>
     Public Function RandomInteger(min As Integer, max As Integer) As Integer
-        Return Math.Floor((max - min + 1) * Random.NextDouble) + min
+        Return Math.Floor((max - min + 1) * Random.NextDouble()) + min
     End Function
 
     ''' <summary>
