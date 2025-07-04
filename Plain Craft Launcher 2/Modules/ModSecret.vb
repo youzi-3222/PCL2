@@ -35,7 +35,7 @@ Friend Module ModSecret
     Public Const TelemetryKey As String = ""
     Public Const NatayarkClientId As String = ""
     Public Const NatayarkClientSecret As String = ""
-    Public LinkServerRoot As String = ""
+    Public Const LinkServerRoot As String = ""
 #End If
 
     Friend Sub SecretOnApplicationStart()
