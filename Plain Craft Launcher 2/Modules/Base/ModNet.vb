@@ -64,7 +64,7 @@ Public Module ModNet
                                          _httpClientHandler = New HttpClientHandler() With {
                                             .Proxy = GetProxy(),
                                             .MaxConnectionsPerServer = 1024,
-                                            .AutomaticDecompression = DecompressionMethods.GZip,
+                                            .AutomaticDecompression = DecompressionMethods.GZip Or DecompressionMethods.Deflate,
                                             .AllowAutoRedirect = True,
                                             .UseCookies = True,
                                             .CookieContainer = New CookieContainer()
@@ -85,73 +85,74 @@ Public Module ModNet
         Private _netCacheDatabase As LiteDatabase
         Private disposedValue As Boolean
 
-        ' 可序列化的缓存数据结构
-        Private Class CachedResponse
-            Public Property StatusCode As HttpStatusCode
-            Public Property Headers As Dictionary(Of String, String())
-            Public Property ContentHeaders As Dictionary(Of String, String())
-            Public Property Content As Byte()
-        End Class
-
         Private Class KeyData
             Public Property ID As String
-            Public Property Data As CachedResponse ' 修改为可序列化类型
+            Public Property Data As Byte() ' 修改为可序列化类型
         End Class
 
         Public Async Function GetValueAsync(key As CacheKey) As Task(Of HttpResponseMessage) Implements ICacheStore.GetValueAsync
-            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            Dim cached = entries.FindById(New BsonValue(key.HashBase64))?.Data
+            Try
+                'Log($"[NetCache] 尝试获取缓存 {key.ResourceUri}:{key.HashBase64}", LogLevel.Debug)
+                Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+                Dim cached = entries.FindById(New BsonValue(GetDatabaseIdByCacheKey(key)))?.Data
 
-            If cached Is Nothing Then Return Nothing
-
-            ' 重建 HttpResponseMessage
-            Dim response = New HttpResponseMessage(cached.StatusCode) With {
-                .Content = New ByteArrayContent(cached.Content)
-            }
-
-            ' 添加头部
-            For Each header In cached.Headers
-                response.Headers.TryAddWithoutValidation(header.Key, header.Value)
-            Next
-
-            ' 添加内容头部
-            For Each header In cached.ContentHeaders
-                response.Content.Headers.TryAddWithoutValidation(header.Key, header.Value)
-            Next
-
-            Return response
+                If cached Is Nothing Then Return Nothing
+                Log($"[NetCache] 击中缓存 {key.ResourceUri}:{key.HashBase64}")
+                Dim seContent As New MemoryStream(cached)
+                Return Await New MessageContentHttpMessageSerializer().DeserializeToResponseAsync(seContent)
+            Catch ex As Exception
+                Log(ex, $"[NetCache] 获取 {key.ResourceUri}:{key.HashBase64} 缓存信息失败")
+                Throw
+            End Try
         End Function
 
         Public Async Function AddOrUpdateAsync(key As CacheKey, response As HttpResponseMessage) As Task Implements ICacheStore.AddOrUpdateAsync
-            If response Is Nothing Then Return
-            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+            Try
+                If response Is Nothing Then Return
+                Log($"[NetCache] 已更新 {key.ResourceUri}:{key.HashBase64} 的缓存")
+                Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
 
-            ' 创建可序列化的缓存对象
-            Dim cached As New CachedResponse With {
-                .StatusCode = response.StatusCode,
-                .Headers = response.Headers.ToDictionary(Function(h) h.Key, Function(h) h.Value.ToArray()),
-                .ContentHeaders = response.Content.Headers.ToDictionary(Function(h) h.Key, Function(h) h.Value.ToArray()),
-                .Content = Await response.Content.ReadAsByteArrayAsync()
-            }
+                Dim content As New MemoryStream()
+                Await New MessageContentHttpMessageSerializer().SerializeAsync(response, content)
+                Dim indexId = GetDatabaseIdByCacheKey(key)
+                Dim target = New KeyData() With {.ID = indexId, .Data = content.ToArray()}
 
-            Dim target = New KeyData() With {.ID = key.HashBase64, .Data = cached}
-
-            Dim quRes = entries.FindById(New BsonValue(key.HashBase64))
-            If quRes Is Nothing Then
-                entries.Insert(target)
-            Else
-                entries.Update(target)
-            End If
+                Dim quRes = entries.FindById(New BsonValue(indexId))
+                If quRes Is Nothing Then
+                    entries.Insert(target)
+                Else
+                    entries.Update(target)
+                End If
+            Catch ex As Exception
+                Log(ex, $"[NetCache] 更新 {key.ResourceUri}:{key.HashBase64} 缓存信息失败")
+                Throw
+            End Try
         End Function
 
         Public Async Function TryRemoveAsync(key As CacheKey) As Task(Of Boolean) Implements ICacheStore.TryRemoveAsync
-            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            entries.Delete(New BsonValue(key.HashBase64))
+            Try
+                Log($"[NetCache] 已移除 {key.ResourceUri}:{key.HashBase64} 的缓存")
+                Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+                Return entries.Delete(New BsonValue(GetDatabaseIdByCacheKey(key)))
+            Catch ex As Exception
+                Log(ex, $"[NetCache] 移除 {key.ResourceUri}:{key.HashBase64} 缓存信息失败")
+                Throw
+            End Try
         End Function
 
         Public Async Function ClearAsync() As Task Implements ICacheStore.ClearAsync
-            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            entries.DeleteAll()
+            Try
+                Log($"[NetCache] 缓存已清空")
+                Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+                entries.DeleteAll()
+            Catch ex As Exception
+                Log(ex, $"[NetCache] 清空缓存信息失败")
+                Throw
+            End Try
+        End Function
+
+        Private Function GetDatabaseIdByCacheKey(key As CacheKey) As String
+            Return Core.Helper.Hash.SHA256Provider.Instance.ComputeHash(key.HashBase64 & key.ResourceUri)
         End Function
 
         Protected Overridable Sub Dispose(disposing As Boolean)
