@@ -100,13 +100,13 @@ Public Module ModNet
 
         Public Async Function GetValueAsync(key As CacheKey) As Task(Of HttpResponseMessage) Implements ICacheStore.GetValueAsync
             Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            Dim cached = entries.FindById(key.HashBase64)?.Data
+            Dim cached = entries.FindById(New BsonValue(key.HashBase64))?.Data
 
             If cached Is Nothing Then Return Nothing
 
             ' 重建 HttpResponseMessage
             Dim response = New HttpResponseMessage(cached.StatusCode) With {
-            .Content = New ByteArrayContent(cached.Content)
+                .Content = New ByteArrayContent(cached.Content)
             }
 
             ' 添加头部
@@ -123,8 +123,8 @@ Public Module ModNet
         End Function
 
         Public Async Function AddOrUpdateAsync(key As CacheKey, response As HttpResponseMessage) As Task Implements ICacheStore.AddOrUpdateAsync
+            If response Is Nothing Then Return
             Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            Dim qu = Query.EQ("ID", key.HashBase64)
 
             ' 创建可序列化的缓存对象
             Dim cached As New CachedResponse With {
@@ -136,10 +136,11 @@ Public Module ModNet
 
             Dim target = New KeyData() With {.ID = key.HashBase64, .Data = cached}
 
-            If entries.Find(qu).Any() Then
-                entries.Update(target)
-            Else
+            Dim quRes = entries.FindById(New BsonValue(key.HashBase64))
+            If quRes Is Nothing Then
                 entries.Insert(target)
+            Else
+                entries.Update(target)
             End If
         End Function
 
