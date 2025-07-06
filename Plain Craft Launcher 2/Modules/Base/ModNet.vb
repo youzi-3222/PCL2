@@ -1,8 +1,11 @@
 Imports System.ComponentModel
 Imports System.Runtime.InteropServices
-
 Imports System.Net.Http
 Imports System.Threading.Tasks
+
+Imports LiteDB
+Imports CacheCow.Client
+Imports CacheCow.Common
 
 Public Module ModNet
     Public Const NetDownloadEnd As String = ".PCLDownloading"
@@ -40,6 +43,7 @@ Public Module ModNet
     Private _PreviousProxyLink As String
     Private _httpClient As HttpClient
     Private _httpClientHandler As HttpClientHandler
+    Private _httpCache As New NetCache
     Public Function GetHttpClient() As HttpClient
         If Setup.Get("SystemHttpProxy") <> _PreviousProxyLink Then
             _httpClient?.Dispose()
@@ -65,11 +69,108 @@ Public Module ModNet
                                             .UseCookies = True,
                                             .CookieContainer = New CookieContainer()
                                         }
-                                         _httpClient = New HttpClient(_httpClientHandler)
+                                         _httpClient = ClientExtensions.CreateClient(_httpCache, _httpClientHandler)
                                      End Sub)
         End If
         Return _httpInitTask
     End Function
+
+    Public Class NetCache
+        Implements ICacheStore, IDisposable
+
+        Sub New()
+            _netCacheDatabase = New LiteDatabase($"Filename={PathTemp}Cache\NetCache.db")
+        End Sub
+
+        Private _netCacheDatabase As LiteDatabase
+        Private disposedValue As Boolean
+
+        ' 可序列化的缓存数据结构
+        Private Class CachedResponse
+            Public Property StatusCode As HttpStatusCode
+            Public Property Headers As Dictionary(Of String, String())
+            Public Property ContentHeaders As Dictionary(Of String, String())
+            Public Property Content As Byte()
+        End Class
+
+        Private Class KeyData
+            Public Property ID As String
+            Public Property Data As CachedResponse ' 修改为可序列化类型
+        End Class
+
+        Public Async Function GetValueAsync(key As CacheKey) As Task(Of HttpResponseMessage) Implements ICacheStore.GetValueAsync
+            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+            Dim cached = entries.FindById(key.HashBase64)?.Data
+
+            If cached Is Nothing Then Return Nothing
+
+            ' 重建 HttpResponseMessage
+            Dim response = New HttpResponseMessage(cached.StatusCode) With {
+            .Content = New ByteArrayContent(cached.Content)
+            }
+
+            ' 添加头部
+            For Each header In cached.Headers
+                response.Headers.TryAddWithoutValidation(header.Key, header.Value)
+            Next
+
+            ' 添加内容头部
+            For Each header In cached.ContentHeaders
+                response.Content.Headers.TryAddWithoutValidation(header.Key, header.Value)
+            Next
+
+            Return response
+        End Function
+
+        Public Async Function AddOrUpdateAsync(key As CacheKey, response As HttpResponseMessage) As Task Implements ICacheStore.AddOrUpdateAsync
+            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+            Dim qu = Query.EQ("ID", key.HashBase64)
+
+            ' 创建可序列化的缓存对象
+            Dim cached As New CachedResponse With {
+                .StatusCode = response.StatusCode,
+                .Headers = response.Headers.ToDictionary(Function(h) h.Key, Function(h) h.Value.ToArray()),
+                .ContentHeaders = response.Content.Headers.ToDictionary(Function(h) h.Key, Function(h) h.Value.ToArray()),
+                .Content = Await response.Content.ReadAsByteArrayAsync()
+            }
+
+            Dim target = New KeyData() With {.ID = key.HashBase64, .Data = cached}
+
+            If entries.Find(qu).Any() Then
+                entries.Update(target)
+            Else
+                entries.Insert(target)
+            End If
+        End Function
+
+        Public Async Function TryRemoveAsync(key As CacheKey) As Task(Of Boolean) Implements ICacheStore.TryRemoveAsync
+            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+            Dim qu = Query.EQ("ID", key.HashBase64)
+            entries.DeleteMany(qu)
+        End Function
+
+        Public Async Function ClearAsync() As Task Implements ICacheStore.ClearAsync
+            Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
+            entries.DeleteAll()
+        End Function
+
+        Protected Overridable Sub Dispose(disposing As Boolean)
+            If Not disposedValue Then
+                If disposing Then
+                    _netCacheDatabase.Dispose()
+                End If
+
+                _netCacheDatabase = Nothing
+                disposedValue = True
+            End If
+        End Sub
+
+        Public Sub Dispose() Implements IDisposable.Dispose
+            ' 不要更改此代码。请将清理代码放入“Dispose(disposing As Boolean)”方法中
+            Dispose(disposing:=True)
+            GC.SuppressFinalize(Me)
+        End Sub
+    End Class
 
     ''' <summary>
     ''' 测试 Ping。失败则返回 -1。
@@ -792,6 +893,7 @@ Retry:
         Public Source As NetSource
 
     End Class
+
     ''' <summary>
     ''' 下载单个文件。
     ''' </summary>
