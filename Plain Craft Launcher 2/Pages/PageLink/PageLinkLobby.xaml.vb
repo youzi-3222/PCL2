@@ -20,12 +20,14 @@
 
     Public IsLoad As Boolean = False
     Public Sub Reload() Handles Me.Loaded
+        If IsLoad Then Exit Sub
+        IsLoad = True
         HintAnnounce.Visibility = Visibility.Visible
         HintAnnounce.Text = "正在连接到大厅服务器..."
         HintAnnounce.Theme = MyHint.Themes.Blue
         RunInNewThread(Sub()
                            If Not Setup.Get("LinkEula") Then
-                               Select Case MyMsgBox($"在使用 PCL CE 大厅之前，请阅读并同意以下条款：{vbCrLf}{vbCrLf}我承诺严格遵守中国大陆相关法律法规，不会将大厅功能用于违法违规用途。{vbCrLf}我承诺使用大厅功能带来的一切风险自行承担。{vbCrLf}我已知晓并同意 PCL CE 收集经处理的本机识别码、Natayark ID 与其他信息并在必要时提供给执法部门。{vbCrLf}{vbCrLf}另外，你还需要同意 PCL CE 大厅相关隐私政策及《Natayark OpenID 服务条款》。", "联机大厅协议授权",
+                               Select Case MyMsgBox($"在使用 PCL CE 大厅之前，请阅读并同意以下条款：{vbCrLf}{vbCrLf}我承诺严格遵守中国大陆相关法律法规，不会将大厅功能用于违法违规用途。{vbCrLf}我承诺使用大厅功能带来的一切风险自行承担。{vbCrLf}我已知晓并同意 PCL CE 收集经处理的本机识别码、Natayark ID 与其他信息并在必要时提供给执法部门。{vbCrLf}为保护未成年人个人信息，使用联机大厅前，我确认我已满十四周岁。{vbCrLf}{vbCrLf}另外，你还需要同意 PCL CE 大厅相关隐私政策及《Natayark OpenID 服务条款》。", "联机大厅协议授权",
                                                     "我已阅读并同意", "拒绝并返回", "查看相关隐私协议",
                                                     Button3Action:=Sub() OpenWebsite("https://www.pclc.cc/privacy/personal-info-brief.html"))
                                    Case 1
@@ -35,12 +37,10 @@
                                End Select
                            End If
                        End Sub)
-        If IsLoad Then Exit Sub
-        IsLoad = True
         IsMcWatcherRunning = True
         GetAnnouncement()
         If Not String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshToken")) Then
-            If Not String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshExpiresAt")) AndAlso Convert.ToDateTime(Setup.Get("LinkNaidRefreshExpiresAt")).CompareTo(DateTime.Now) > 0 Then
+            If Not String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshExpiresAt")) AndAlso Convert.ToDateTime(Setup.Get("LinkNaidRefreshExpiresAt")).CompareTo(DateTime.Now) < 0 Then
                 Setup.Set("LinkNaidRefreshToken", "")
                 Hint("Natayark ID 令牌已过期，请重新登录", HintType.Critical)
             Else
@@ -278,13 +278,14 @@
                            End If
                            Log("[Link] 启动 EasyTier 轮询")
                            IsWatcherStarted = True
-                           While ETProcess IsNot Nothing AndAlso ETProcess.HasExited = False
+                           While ETProcessPid IsNot Nothing
                                GetETInfo()
                                Thread.Sleep(15000)
                            End While
-                           If ETProcess Is Nothing OrElse ETProcess.HasExited Then
+                           If ETProcessPid Is Nothing Then
                                RunInUi(Sub()
                                            CurrentSubpage = Subpages.PanSelect
+                                           If Not IsHost Then StopMcPortForward()
                                            Log("[Link] EasyTier 已退出")
                                        End Sub)
                            End If
@@ -475,7 +476,6 @@
         RunInNewThread(Sub()
                            'CreateNATTranversal(LocalPort)
                            CheckFirewall()
-                           LaunchLink(True, LocalPort:=LocalPort)
                            RunInUi(Sub()
                                        SplitLineBeforePing.Visibility = Visibility.Collapsed
                                        BtnFinishPing.Visibility = Visibility.Collapsed
@@ -486,6 +486,11 @@
                                        LabFinishTitle.Text = "大厅创建中..."
                                        LabFinishDesc.Text = $"您是大厅创建者，使用 {NaidProfile.Username} 的身份进行联机"
                                    End Sub)
+                           Dim Id As String = Nothing
+                           For index = 1 To 8 '生成 8 位随机编号
+                               Id += RandomInteger(0, 9).ToString()
+                           Next
+                           LaunchLink(True, Id, LocalPort:=LocalPort)
                            Dim RetryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
@@ -522,7 +527,6 @@
         IsHost = False
         RunInNewThread(Sub()
                            CheckFirewall()
-                           LaunchLink(False, JoinedLobbyId, ETNetworkDefaultSecret & JoinedLobbyId)
                            RunInUi(Sub()
                                        SplitLineBeforePing.Visibility = Visibility.Visible
                                        BtnFinishPing.Visibility = Visibility.Visible
@@ -535,6 +539,8 @@
                                        LabFinishTitle.Text = "加入大厅中..."
                                        LabFinishDesc.Text = $"您是加入者，使用 {NaidProfile.Username} 的身份进行联机"
                                    End Sub)
+                           Dim Status As Integer = 1
+                           Status = LaunchLink(False, JoinedLobbyId, ETNetworkDefaultSecret & JoinedLobbyId)
                            Dim RetryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
@@ -553,7 +559,7 @@
                            While IsWatcherStarted AndAlso RemotePort Is Nothing
                                Thread.Sleep(500)
                            End While
-                           McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
+                           If Status = 0 Then McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
                            RunInUi(Sub() LabFinishTitle.Text = $"已加入 {Hostname} 的大厅")
                        End Sub)
         CurrentSubpage = Subpages.PanFinish
