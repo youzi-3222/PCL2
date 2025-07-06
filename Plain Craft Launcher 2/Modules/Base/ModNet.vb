@@ -146,8 +146,7 @@ Public Module ModNet
 
         Public Async Function TryRemoveAsync(key As CacheKey) As Task(Of Boolean) Implements ICacheStore.TryRemoveAsync
             Dim entries = _netCacheDatabase.GetCollection(Of KeyData)("Cache")
-            Dim qu = Query.EQ("ID", key.HashBase64)
-            entries.DeleteMany(qu)
+            entries.Delete(New BsonValue(key.HashBase64))
         End Function
 
         Public Async Function ClearAsync() As Task Implements ICacheStore.ClearAsync
