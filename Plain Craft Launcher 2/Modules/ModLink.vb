@@ -420,8 +420,8 @@ Public Module ModLink
 
             '大厅设置
             If IsHost Then
-                Name = ETNetworkDefaultName & Name
                 Secret = ETNetworkDefaultSecret & Name
+                Name = ETNetworkDefaultName & Name
                 Log($"[Link] 本机作为创建者创建大厅，EasyTier 网络名称: {Name}")
                 Arguments = $"-i 10.114.51.41 --network-name {Name} --network-secret {Secret} --no-tun --relay-network-whitelist ""{Name}"" --private-mode true" '创建者
             Else
