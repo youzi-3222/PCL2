@@ -389,7 +389,7 @@ Retry:
             Hostname = HostInfo.NaidName
             If IsHost Then '确认创建者实例存活状态
                 Dim test As New MCPing("127.0.0.1", LocalPort)
-                Dim info = test.GetInfo().GetAwaiter().GetResult()
+                Dim info = test.GetInfo(False).GetAwaiter().GetResult()
                 If info Is Nothing Then
                     Log($"[MCDetect] 本地 MC 局域网实例疑似已关闭，关闭大厅")
                     RunInUi(Sub()

@@ -471,7 +471,7 @@ Public Module ModLink
             Log($"[Link] 启动 EasyTier")
             'Log($"[Link] EasyTier 参数: {Arguments}")
             RunInUi(Sub() FrmLinkLobby.LabFinishId.Text = Name.Replace(ETNetworkDefaultName, ""))
-            PromoteService.Append($"start {ETPath}\easytier-core.exe. ; ", Sub(s As String) ETProcessPid = s, False)
+            PromoteService.Append($"start {ETPath}\easytier-core.exe. ; {Arguments}", Sub(s As String) ETProcessPid = s, False)
             IsETRunning = PromoteService.Activate()
             Return 0
         Catch ex As Exception
