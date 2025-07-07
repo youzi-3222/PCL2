@@ -70,7 +70,7 @@ Public Module ModLink
                         latency.Start()
                         Dim packetLength = VarInt.ReadFromStream(stream)
                         latency.Stop()
-                        Log($"[MCPing] Got packet length ({packetLength})", LogLevel.Debug)
+                        If DoLog Then Log($"[MCPing] Got packet length ({packetLength})", LogLevel.Debug)
 
                         ' 读取剩余数据包
                         Dim totalBytes = 0
@@ -85,12 +85,12 @@ Public Module ModLink
                             Loop While totalBytes < packetLength
                         End Using
 
-                        Log($"[MCPing] Received ({res.Count})", LogLevel.Debug)
+                        If DoLog Then Log($"[MCPing] Received ({res.Count})", LogLevel.Debug)
                         Dim response As String = Encoding.UTF8.GetString(res.ToArray(), 0, res.Count)
                         Dim startIndex = response.IndexOf("{""", StringComparison.Ordinal)
                         If startIndex > 10 Then Return Nothing
                         response = response.Substring(startIndex)
-                        Log("[MCPing] Server Response: " & response, LogLevel.Debug)
+                        If DoLog Then Log("[MCPing] Server Response: " & response, LogLevel.Debug)
 
                         '查找并截取第一段 JSON
                         '有些 mod 或是整合包定制服务端会在返回的 JSON 后面添加新的内容，比如 Better MC
