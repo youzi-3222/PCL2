@@ -37,7 +37,7 @@ Friend Module ModSecret
     Public Const NatayarkClientSecret As String = ""
     Public Const LinkServerRoots As String = ""
 #End If
-    Public LinkServers As String() = Base64Decode(LinkServerRoots).Split(",")
+    Public LinkServers As String() = LinkServerRoots.Split(";")
 
     Friend Sub SecretOnApplicationStart()
         '提升 UI 线程优先级
