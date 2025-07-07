@@ -80,6 +80,7 @@ Public Module ModNet
 
         Private _cacheFolder As String
         Private disposedValue As Boolean
+        Private _serializer As New MessageContentHttpMessageSerializer()
         Sub New()
             _cacheFolder = IO.Path.Combine(PathTemp, "Cache", "NetCache")
             Dim dir As New DirectoryInfo(_cacheFolder)
@@ -96,7 +97,7 @@ Public Module ModNet
                     If Not File.Exists(target) Then Return Nothing
                     Log($"[NetCache] 击中缓存 {key.ResourceUri}:{key.HashBase64}")
                     Dim fs As New FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read)
-                    Return Await New MessageContentHttpMessageSerializer().DeserializeToResponseAsync(fs)
+                    Return Await _serializer.DeserializeToResponseAsync(fs)
                 Catch ex As Exception
                     Log(ex, $"[NetCache] 获取 {key.ResourceUri}:{key.HashBase64} 缓存信息失败")
                     Return Nothing
@@ -109,12 +110,12 @@ Public Module ModNet
             Try
                 If response Is Nothing Then Return
                 If Not response.IsSuccessStatusCode Then Return
-                Log($"[NetCache] 已更新 {key.ResourceUri}:{key.HashBase64} 的缓存")
                 Dim target = IO.Path.Combine(_cacheFolder, GetDatabaseIdByCacheKey(key))
                 Using fs As New FileStream(target, FileMode.Create, FileAccess.ReadWrite, FileShare.Read)
                     fs.SetLength(0)
-                    Await New MessageContentHttpMessageSerializer().SerializeAsync(response, fs)
+                    Await _serializer.SerializeAsync(response, fs)
                 End Using
+                Log($"[NetCache] 已更新 {key.ResourceUri}:{key.HashBase64} 的缓存")
             Catch ex As Exception
                 Log(ex, $"[NetCache] 更新 {key.ResourceUri}:{key.HashBase64} 缓存信息失败")
                 Return
