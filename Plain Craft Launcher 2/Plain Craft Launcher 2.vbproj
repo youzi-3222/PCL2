@@ -315,7 +315,7 @@
     <Compile Include="Pages\PageOther\PageOtherLog.xaml.vb">
       <DependentUpon>PageOtherLog.xaml</DependentUpon>
     <Compile Include="Pages\PageSetup\PageHomePageMarket.xaml.vb">
-      <DependentUpon>PageHomePageMarket.xaml</Depende>
+      <DependentUpon>PageHomePageMarket.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageSetup\PageSetupJava.xaml.vb">
       <DependentUpon>PageSetupJava.xaml</DependentUpon>
