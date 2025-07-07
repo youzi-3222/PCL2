@@ -240,11 +240,11 @@ Public Class FormMain
                     Dim ServerNumber As Integer = 0
 Retry:
                     Try
-                        Chance = Val(NetRequestOnce($"{LinkServerRoots(ServerNumber)}/api/link/lottery.ini", "GET", Nothing, "application/json", Timeout:=7000))
+                        Chance = Val(NetRequestOnce($"{LinkServers(ServerNumber)}/api/link/lottery.ini", "GET", Nothing, "application/json", Timeout:=7000))
                     Catch ex As Exception
                         Log(ex, $"[Link] 从服务器 {ServerNumber} 获取摇号数据失败")
                         ServerNumber += 1
-                        If ServerNumber <= LinkServerRoots.Count - 1 Then GoTo Retry
+                        If ServerNumber <= LinkServers.Count - 1 Then GoTo Retry
                     End Try
                     Dim Num As Integer = RandomInteger(0, 100)
                     If Num > 1 - (Chance * 100) Then Setup.Set("LinkAvailable", True)

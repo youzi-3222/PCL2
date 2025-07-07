@@ -95,13 +95,13 @@
                                Dim Cache As Integer = Nothing
 Retry:
                                Try
-                                   Cache = Val(NetRequestOnce($"{LinkServerRoots(ServerNumber)}/api/link/cache.ini", "GET", Nothing, "application/json", Timeout:=7000))
+                                   Cache = Val(NetRequestOnce($"{LinkServers(ServerNumber)}/api/link/cache.ini", "GET", Nothing, "application/json", Timeout:=7000))
                                    If Cache = Setup.Get("LinkAnnounceCacheVer") Then
                                        Log("[Link] 使用缓存的公告数据")
                                        Jobj = JObject.Parse(Setup.Get("LinkAnnounceCache"))
                                    Else
                                        Log("[Link] 尝试拉取公告数据")
-                                       Dim Received As String = NetRequestOnce($"{LinkServerRoots(ServerNumber)}/api/link/announce.json", "GET", Nothing, "application/json", Timeout:=7000)
+                                       Dim Received As String = NetRequestOnce($"{LinkServers(ServerNumber)}/api/link/announce.json", "GET", Nothing, "application/json", Timeout:=7000)
                                        Jobj = JObject.Parse(Received)
                                        Setup.Set("LinkAnnounceCache", Received)
                                        Setup.Set("LinkAnnounceCacheVer", Cache)
@@ -109,7 +109,7 @@ Retry:
                                Catch ex As Exception
                                    Log(ex, $"[Link] 从服务器 {ServerNumber} 获取公告缓存失败")
                                    ServerNumber += 1
-                                   If ServerNumber <= LinkServerRoots.Count - 1 Then GoTo Retry
+                                   If ServerNumber <= LinkServers.Count - 1 Then GoTo Retry
                                End Try
                                If Jobj Is Nothing Then Throw New Exception("获取联机数据失败")
                                IsLobbyAvailable = Jobj("available")
