@@ -74,13 +74,16 @@ Public Module ModLink
 
                         ' 读取剩余数据包
                         Dim totalBytes = 0
-                        Do
-                            Dim bytesRead = Await stream.ReadAsync(buffer, 0, buffer.Length)
-                            If bytesRead = 0 Then Exit Do
-                            res.AddRange(buffer.Take(bytesRead))
-                            totalBytes += bytesRead
-                            If DoLog Then Log($"[MCPing] Received part ({bytesRead})", LogLevel.Debug)
-                        Loop While totalBytes < packetLength
+                        Using cts As New CancellationTokenSource
+                            cts.CancelAfter(TimeSpan.FromSeconds(5))
+                            Do
+                                Dim bytesRead = Await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token)
+                                If bytesRead = 0 Then Exit Do
+                                res.AddRange(buffer.Take(bytesRead))
+                                totalBytes += bytesRead
+                                If DoLog Then Log($"[MCPing] Received part ({bytesRead})", LogLevel.Debug)
+                            Loop While totalBytes < packetLength
+                        End Using
 
                         Log($"[MCPing] Received ({res.Count})", LogLevel.Debug)
                         Dim response As String = Encoding.UTF8.GetString(res.ToArray(), 0, res.Count)
@@ -335,15 +338,16 @@ Public Module ModLink
                 ports.AddRange(PortFinder.GetProcessPort(Integer.Parse(pid)))
             Next
             Log($"[MCDetect] 获取到端口数量 {ports.Count}")
-            For Each port In ports
-                Log($"[MCDetect] 找到疑似端口，开始验证：{port}")
-                Dim test As New MCPing("127.0.0.1", port)
-                Dim info = Await test.GetInfo()
-                If Not String.IsNullOrWhiteSpace(info.VersionName) Then
-                    Log($"[MCDetect] 端口 {port} 为有效 Minecraft 世界")
-                    res.Add(info)
-                End If
-            Next
+            Dim checkTasks = ports.Select(Function(port) Task.Run(Async Function()
+                                                                      Log($"[MCDetect] 找到疑似端口，开始验证：{port}")
+                                                                      Dim test As New MCPing("127.0.0.1", port)
+                                                                      Dim info = Await test.GetInfo()
+                                                                      If Not String.IsNullOrWhiteSpace(info.VersionName) Then
+                                                                          Log($"[MCDetect] 端口 {port} 为有效 Minecraft 世界")
+                                                                          res.Add(info)
+                                                                      End If
+                                                                  End Function)).ToArray()
+            Await Task.WhenAll(checkTasks)
         Catch ex As Exception
             Log(ex, "[MCDetect] 获取端口信息错误", LogLevel.Debug)
         End Try
