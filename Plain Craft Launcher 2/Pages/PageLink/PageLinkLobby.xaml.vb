@@ -33,7 +33,10 @@
                                    Case 1
                                        Setup.Set("LinkEula", True)
                                    Case 2
-                                       RunInUi(Sub() FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch}))
+                                       RunInUi(Sub()
+                                                   FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch})
+                                                   FrmLinkLobby = Nothing
+                                               End Sub)
                                End Select
                            End If
                        End Sub)
@@ -494,22 +497,26 @@ Retry:
                                        LabConnectUserName.Text = NaidProfile.Username
                                        LabConnectUserType.Text = "创建者"
                                    End Sub)
-                           Dim Id As String = Nothing
-                           For index = 1 To 8 '生成 8 位随机编号
+                           Dim id As String = Nothing
+                           For i = 1 To 8 '生成 8 位随机编号
                                Id += RandomInteger(0, 9).ToString()
                            Next
-                           LaunchLink(True, Id, LocalPort:=LocalPort)
-                           Dim RetryCount As Integer = 0
+                           Dim secret As String = Nothing
+                           For i = 1 To 2
+                               secret += RandomInteger(0, 9).ToString()
+                           Next
+                           LaunchLink(True, id, secret, LocalPort)
+                           Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
                                If DlEasyTierLoader IsNot Nothing AndAlso DlEasyTierLoader.State = LoadState.Loading Then Continue While
-                               If RetryCount > 10 Then
+                               If retryCount > 10 Then
                                    Hint("EasyTier 启动失败", HintType.Critical)
                                    RunInUi(Sub() BtnCreate.IsEnabled = True)
                                    ExitEasyTier()
                                    Exit Sub
                                End If
-                               RetryCount += 1
+                               retryCount += 1
                            End While
                            RunInUi(Sub()
                                        BtnCreate.IsEnabled = True
@@ -530,7 +537,7 @@ Retry:
         If Not LobbyPrecheck() Then Exit Sub
         JoinedLobbyId = MyMsgBoxInput("输入大厅编号", HintText:="例如：01509230")
         If JoinedLobbyId = Nothing Then Exit Sub
-        If JoinedLobbyId.Length < 8 Then
+        If JoinedLobbyId.Length < 10 Then
             Hint("大厅编号不合法", HintType.Critical)
             Exit Sub
         End If
@@ -551,19 +558,19 @@ Retry:
                                        LabConnectUserName.Text = NaidProfile.Username
                                        LabConnectUserType.Text = "加入者"
                                    End Sub)
-                           Dim Status As Integer = 1
-                           Status = LaunchLink(False, JoinedLobbyId, ETNetworkDefaultSecret & JoinedLobbyId)
-                           Dim RetryCount As Integer = 0
+                           Dim status As Integer = 1
+                           status = LaunchLink(False, JoinedLobbyId, JoinedLobbyId.Substring(JoinedLobbyId.Length - 2))
+                           Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
                                If DlEasyTierLoader IsNot Nothing AndAlso DlEasyTierLoader.State = LoadState.Loading Then Continue While
-                               If RetryCount > 10 Then
+                               If retryCount > 10 Then
                                    Hint("EasyTier 启动失败", HintType.Critical)
                                    RunInUi(Sub() BtnCreate.IsEnabled = True)
                                    ExitEasyTier()
                                    Exit Sub
                                End If
-                               RetryCount += 1
+                               retryCount += 1
                            End While
                            Thread.Sleep(1000)
                            StartWatcherThread()
