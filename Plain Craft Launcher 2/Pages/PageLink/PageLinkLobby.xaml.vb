@@ -559,7 +559,7 @@ Retry:
                                        LabConnectUserType.Text = "加入者"
                                    End Sub)
                            Dim status As Integer = 1
-                           status = LaunchLink(False, JoinedLobbyId, JoinedLobbyId.Substring(JoinedLobbyId.Length - 2))
+                           status = LaunchLink(False, JoinedLobbyId.Remove(JoinedLobbyId.Length - 2), JoinedLobbyId.Substring(JoinedLobbyId.Length - 2))
                            Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
