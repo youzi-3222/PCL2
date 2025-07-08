@@ -499,7 +499,7 @@ Retry:
                                    End Sub)
                            Dim id As String = Nothing
                            For i = 1 To 8 '生成 8 位随机编号
-                               Id += RandomInteger(0, 9).ToString()
+                               id += RandomInteger(0, 9).ToString()
                            Next
                            Dim secret As String = Nothing
                            For i = 1 To 2
