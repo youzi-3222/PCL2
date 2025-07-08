@@ -492,8 +492,6 @@ Retry:
                                        BtnConnectType.Visibility = Visibility.Collapsed
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
-                                       PanConnectingTip.Visibility = Visibility.Visible
-                                       PanOperation.Visibility = Visibility.Collapsed
                                        LabConnectUserName.Text = NaidProfile.Username
                                        LabConnectUserType.Text = "创建者"
                                    End Sub)
@@ -521,8 +519,6 @@ Retry:
                            RunInUi(Sub()
                                        BtnCreate.IsEnabled = True
                                        CurrentSubpage = Subpages.PanFinish
-                                       PanConnectingTip.Visibility = Visibility.Collapsed
-                                       PanOperation.Visibility = Visibility.Visible
                                        BtnFinishExit.Text = "关闭大厅"
                                        BtnCreate.IsEnabled = True
                                    End Sub)
@@ -553,8 +549,6 @@ Retry:
                                        LabConnectType.Text = "连接中"
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
-                                       PanConnectingTip.Visibility = Visibility.Visible
-                                       PanOperation.Visibility = Visibility.Collapsed
                                        LabConnectUserName.Text = NaidProfile.Username
                                        LabConnectUserType.Text = "加入者"
                                    End Sub)
@@ -580,8 +574,6 @@ Retry:
                            End While
                            If Status = 0 Then McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
                            RunInUi(Sub()
-                                       PanConnectingTip.Visibility = Visibility.Collapsed
-                                       PanOperation.Visibility = Visibility.Visible
                                        BtnFinishExit.Text = $"退出 {Hostname} 的大厅"
                                    End Sub)
                        End Sub)

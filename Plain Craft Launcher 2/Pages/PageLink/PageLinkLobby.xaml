@@ -185,8 +185,6 @@
                         </StackPanel>
                     </local:MyCard>
                 </StackPanel>
-                <!--展示操作栏前的提示栏-->
-                <local:MyHint Text="正在尝试建立连接……" Margin="0,0,0,16" Grid.Row="1" x:Name="PanConnectingTip"/>
                 <!--操作栏-->
                 <local:MyCard x:Name="PanOperation" HorizontalAlignment="Center" Margin="0,0,0,16" Grid.Row="1">
                     <StackPanel Orientation="Horizontal" Margin="7">
