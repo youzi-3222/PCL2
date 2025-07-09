@@ -187,7 +187,7 @@ Retry:
     Private Function PlayerInfoItem(Info As ETPlayerInfo, OnClick As MyListItem.ClickEventHandler)
         Dim NewItem As New MyListItem With {
                 .Title = Info.NaidName,
-                .Info = If(Info.IsHost, "[主机] ", "") & If(Info.Cost = "Local", "[本机]", $"{Info.Ping}ms / {GetConnectTypeChinese(Info.Cost)}{If(Not Info.Loss = 0, $" / 丢包 {Info.Loss}%", "")}"),
+                .Info = If(Info.IsHost, "[主机] ", "") & If(Info.Cost = "Local", $"[本机] NAT {GetNatTypeChinese(Info.NatType)}", $"{Info.Ping}ms / {GetConnectTypeChinese(Info.Cost)}{If(Not Info.Loss = 0, $" / 丢包 {Info.Loss}%", "")}"),
                 .Type = MyListItem.CheckType.Clickable,
                 .Tag = Info
         }
@@ -537,7 +537,7 @@ Retry:
     '加入房间
     Private Sub BtnSelectJoin_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles BtnSelectJoin.MouseLeftButtonUp
         If Not LobbyPrecheck() Then Exit Sub
-        JoinedLobbyId = MyMsgBoxInput("输入大厅编号", HintText:="例如：01509230")
+        JoinedLobbyId = MyMsgBoxInput("输入大厅编号", HintText:="例如：0150923014")
         If JoinedLobbyId = Nothing Then Exit Sub
         If JoinedLobbyId.Length < 10 Then
             Hint("大厅编号不合法", HintType.Critical)
