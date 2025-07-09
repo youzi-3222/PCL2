@@ -458,7 +458,7 @@ Public Module ModLink
             PromoteService.Activate()
 
             '用户名与其他参数
-            Arguments += $" --enable-kcp-proxy --latency-first --use-smoltcp --enable-quic-proxy"
+            Arguments += $" --enable-kcp-proxy --latency-first --enable-quic-proxy"
             Dim Hostname As String = Nothing
             Hostname = If(IsHost, LocalPort & "-", "J-") & NaidProfile.Username
             If SelectedProfile IsNot Nothing Then
