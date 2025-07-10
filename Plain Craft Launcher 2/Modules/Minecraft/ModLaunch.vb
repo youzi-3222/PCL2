@@ -610,7 +610,11 @@ SkipLogin:
 
         '控制流程
         Try
-            Return Await MsLoginStep1TrySilentLogin(App, Data)
+            If String.IsNullOrEmpty(Data.Input.AccessToken) OrElse String.IsNullOrEmpty(Data.Input.UserName) Then
+                ProfileLog("没有账号信息，直接进行全新登录流程")
+            Else
+                Return Await MsLoginStep1TrySilentLogin(App, Data)
+            End If
         Catch ex As MsalUiRequiredException
             If ex.ErrorCode = -1 Then
                 ProfileLog("不存在缓存的账号信息，进行全新登录流程")
