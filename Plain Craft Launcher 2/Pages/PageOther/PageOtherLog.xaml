@@ -8,12 +8,21 @@
       d:DesignHeight="450" d:DesignWidth="800"
       PanScroll="{Binding ElementName=PanBack}" RenderOptions.BitmapScalingMode="LowQuality">
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
-        <StackPanel x:Name="PanCustom" Margin="25,10,25,25">
-            <local:MyCard Title="日志列表" Margin="0,15,0,0" x:Name="PanContent">
+        <DockPanel>
+            <local:MyCard DockPanel.Dock="Top" Title="日志操作" Margin="25,25,25,5">
+                <WrapPanel ItemHeight="35" Margin="25,40,20,20">
+                    <local:MyButton MinWidth="100" Text="导出日志" ColorType="Highlight" Margin="0,0,15,0" Click="ButtonExport_OnClick"/>
+                    <local:MyButton MinWidth="120" Text="导出全部日志" ColorType="Normal" Margin="0,0,15,0" Click="ButtonExportAll_OnClick"/>
+                    <local:MyButton MinWidth="120" Text="打开日志目录" ColorType="Normal" Margin="0,0,15,0" Click="ButtonOpenDir_OnClick"/>
+                    <local:MyButton MinWidth="120" Text="清理历史日志" ColorType="Red" Click="ButtonClean_OnClick"/>
+                </WrapPanel>
+            </local:MyCard>
+            <local:MyCard Title="所有日志" Margin="25,10,25,25" x:Name="PanContent">
                 <StackPanel Name="PanList" Orientation="Vertical" Margin="20,36,18,22">
 
                 </StackPanel>
             </local:MyCard>
-        </StackPanel>
+        </DockPanel>
+        
     </local:MyScrollViewer>
 </local:MyPageRight>

@@ -139,6 +139,11 @@
                     FrmOtherVote.Loader.Start(IsForceRestart:=True)
                 End If
                 ItemVote.Checked = True
+            Case FormMain.PageSubType.OtherLog
+                If FrmOtherLog IsNot Nothing Then
+                    FrmOtherLog.LoadList()
+                End If
+                ItemLog.Checked = True
         End Select
         Hint("正在刷新……", Log:=False)
     End Sub

@@ -314,6 +314,7 @@
     </Compile>
     <Compile Include="Pages\PageOther\PageOtherLog.xaml.vb">
       <DependentUpon>PageOtherLog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Pages\PageSetup\PageHomePageMarket.xaml.vb">
       <DependentUpon>PageHomePageMarket.xaml</DependentUpon>
     </Compile>
