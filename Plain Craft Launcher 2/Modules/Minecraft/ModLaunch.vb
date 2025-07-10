@@ -724,15 +724,15 @@ Exception:
     Private Function MsLoginStep2(AccessToken As String) As String
         ProfileLog("开始正版验证 Step 2/6: 获取 XBLToken")
 
-        Dim Request As String = "{
-           ""Properties"": {
-               ""AuthMethod"": ""RPS"",
-               ""SiteName"": ""user.auth.xboxlive.com"",
-               ""RpsTicket"": """ & If(AccessToken.StartsWithF("d="), "", "d=") & AccessToken & """
-           },
-           ""RelyingParty"": ""http://auth.xboxlive.com"",
-           ""TokenType"": ""JWT""
-        }"
+        Dim Request As String = New JObject(
+                                        New JProperty("Properties", New JObject(
+                                            New JProperty("AuthMethod", "RPS"),
+                                            New JProperty("SiteName", "user.auth.xboxlive.com"),
+                                            New JProperty("RpsTicket", If(AccessToken.StartsWith("d="), AccessToken, $"d={AccessToken}"))
+                                        )),
+                                    New JProperty("RelyingParty", "http://auth.xboxlive.com"),
+                                    New JProperty("TokenType", "JWT")
+                                ).ToString(Newtonsoft.Json.Formatting.None)
         Dim Result As String = Nothing
         Try
             Result = NetRequestRetry("https://user.auth.xboxlive.com/user/authenticate", "POST", Request, "application/json", 3)
@@ -758,17 +758,14 @@ Exception:
     ''' <returns>包含 XSTSToken 与 UHS 的字符串组</returns>
     Private Function MsLoginStep3(XBLToken As String) As String()
         ProfileLog("开始正版验证 Step 3/6: 获取 XSTSToken")
-
-        Dim Request As String = "{
-                                    ""Properties"": {
-                                        ""SandboxId"": ""RETAIL"",
-                                        ""UserTokens"": [
-                                            """ & XBLToken & """
-                                        ]
-                                    },
-                                    ""RelyingParty"": ""rp://api.minecraftservices.com/"",
-                                    ""TokenType"": ""JWT""
-                                 }"
+        Dim Request As String = New JObject(
+                                    New JProperty("Properties", New JObject(
+                                        New JProperty("SandboxId", "RETAIL"),
+                                        New JProperty("UserTokens", New JArray(XBLToken))
+                                    )),
+                                New JProperty("RelyingParty", "rp://api.minecraftservices.com/"),
+                                New JProperty("TokenType", "JWT")
+                            ).ToString(Newtonsoft.Json.Formatting.None)
         Dim Result As String
         Try
             Result = NetRequestRetry("https://xsts.auth.xboxlive.com/xsts/authorize", "POST", Request, "application/json", 3)
@@ -851,7 +848,7 @@ Exception:
         End Try
 
         Dim ResultJson As JObject = GetJson(Result)
-        Dim AccessToken As String = ResultJson("access_token").ToString
+        Dim AccessToken As String = ResultJson("access_token").ToString()
         Return AccessToken
     End Function
     ''' <summary>
