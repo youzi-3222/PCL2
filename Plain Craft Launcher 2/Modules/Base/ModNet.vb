@@ -69,7 +69,7 @@ Public Module ModNet
                                             .UseCookies = True,
                                             .CookieContainer = New CookieContainer()
                                         }
-                                         _httpClient = ClientExtensions.CreateClient(_httpCache, _httpClientHandler)
+                                         _httpClient = New HttpClient(_httpClientHandler)
                                      End Sub)
         End If
         Return _httpInitTask

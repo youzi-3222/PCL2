@@ -419,13 +419,12 @@ Public Module ModLink
             Dim Arguments As String = Nothing
 
             '大厅设置
+            Secret = ETNetworkDefaultSecret & Secret
+            Name = ETNetworkDefaultName & Name
             If IsHost Then
-                Secret = ETNetworkDefaultSecret & Name
-                Name = ETNetworkDefaultName & Name
                 Log($"[Link] 本机作为创建者创建大厅，EasyTier 网络名称: {Name}")
                 Arguments = $"-i 10.114.51.41 --network-name {Name} --network-secret {Secret} --no-tun --relay-network-whitelist ""{Name}"" --private-mode true" '创建者
             Else
-                Name = ETNetworkDefaultName & Name
                 Log($"[Link] 本机作为加入者加入大厅，EasyTier 网络名称: {Name}")
                 Arguments = $"-d --network-name {Name} --network-secret {Secret} --dev-name ""PCLCELobby"" --relay-network-whitelist ""{Name}"" --private-mode true" '加入者
             End If
@@ -459,7 +458,7 @@ Public Module ModLink
             PromoteService.Activate()
 
             '用户名与其他参数
-            Arguments += $" --enable-kcp-proxy --latency-first --use-smoltcp"
+            Arguments += $" --enable-kcp-proxy --latency-first --use-smoltcp --enable-quic-proxy"
             Dim Hostname As String = Nothing
             Hostname = If(IsHost, LocalPort & "-", "J-") & NaidProfile.Username
             If SelectedProfile IsNot Nothing Then
@@ -470,7 +469,7 @@ Public Module ModLink
             '启动
             Log($"[Link] 启动 EasyTier")
             'Log($"[Link] EasyTier 参数: {Arguments}")
-            RunInUi(Sub() FrmLinkLobby.LabFinishId.Text = Name.Replace(ETNetworkDefaultName, ""))
+            RunInUi(Sub() FrmLinkLobby.LabFinishId.Text = Name.Replace(ETNetworkDefaultName, "") & Secret.Replace(ETNetworkDefaultSecret, ""))
             PromoteService.Append($"start {ETPath}\easytier-core.exe. ; {Arguments}", Sub(s As String) ETProcessPid = s, False)
             IsETRunning = PromoteService.Activate()
             Return 0
@@ -521,7 +520,6 @@ Public Module ModLink
     End Function
 
     Public Sub ExitEasyTier()
-
         If IsETRunning AndAlso ETProcessPid IsNot Nothing Then
             Try
                 Log($"[Link] 停止 EasyTier（PID: {ETProcessPid}）")
@@ -631,7 +629,6 @@ Public Module ModLink
             End If
             Return 1
         End Try
-        StopMcPortForward()
         Return LaunchEasyTier(IsHost, Name, Secret, LocalPort:=LocalPort)
     End Function
 #End Region
@@ -821,8 +818,8 @@ PortRetry:
 #End Region
 
 #Region "局域网广播"
-    Private tr1 As Thread = Nothing
-    Private tr2 As Thread = Nothing
+    Private UdpThread As Thread = Nothing
+    Private TcpThread As Thread = Nothing
     Private ServerSocket As Socket = Nothing
     Private ChatClient As UdpClient = Nothing
     Private IsMcPortForwardRunning As Boolean = False
@@ -839,82 +836,96 @@ PortRetry:
 
         IsMcPortForwardRunning = True
 
-        tr1 = New Thread(Async Sub()
-                             Try
-                                 Log("[Link] 开始进行 MC 局域网广播")
-                                 ChatClient = New UdpClient("224.0.2.60", 4445)
-                                 Dim Buffer As Byte() = Encoding.UTF8.GetBytes($"[MOTD]{Desc}[/MOTD][AD]{CType(ServerSocket.LocalEndPoint, IPEndPoint).Port}[/AD]")
-                                 While IsMcPortForwardRunning
-                                     If ChatClient IsNot Nothing Then
-                                         ChatClient.EnableBroadcast = True
-                                         ChatClient.MulticastLoopback = True
-                                     End If
+        UdpThread = New Thread(Async Sub()
+                                   Try
+                                       Log("[Link] 开始进行 MC 局域网广播")
+                                       ChatClient = New UdpClient("224.0.2.60", 4445)
+                                       Dim Buffer As Byte() = Encoding.UTF8.GetBytes($"[MOTD]{Desc}[/MOTD][AD]{CType(ServerSocket.LocalEndPoint, IPEndPoint).Port}[/AD]")
+                                       While IsMcPortForwardRunning
+                                           If ChatClient IsNot Nothing Then
+                                               ChatClient.EnableBroadcast = True
+                                               ChatClient.MulticastLoopback = True
+                                           End If
 
-                                     If IsMcPortForwardRunning AndAlso ChatClient IsNot Nothing Then
-                                         Await ChatClient.SendAsync(Buffer, Buffer.Length)
-                                         If IsMcPortForwardRunning Then Await Task.Delay(1500)
-                                     End If
-                                 End While
-                             Catch ex As Exception
-                                 If PortForwardRetryTimes < 4 Then
-                                     Log($"[Link] Minecraft 端口转发线程异常，放弃前再尝试 {3 - PortForwardRetryTimes} 次")
-                                     McPortForward(Ip, Port, Desc, True)
-                                 Else
-                                     Log(ex, "[Link] Minecraft 端口转发线程异常", LogLevel.Msgbox)
-                                     IsMcPortForwardRunning = False
-                                 End If
-                             End Try
-                         End Sub)
+                                           If IsMcPortForwardRunning AndAlso ChatClient IsNot Nothing Then
+                                               Await ChatClient.SendAsync(Buffer, Buffer.Length)
+                                               If IsMcPortForwardRunning Then Await Task.Delay(1500)
+                                           End If
+                                       End While
+                                   Catch ex As Exception
+                                       If Not IsMcPortForwardRunning Then Exit Sub
+                                       If PortForwardRetryTimes < 4 Then
+                                           Log($"[Link] Minecraft 端口转发线程异常，放弃前再尝试 {3 - PortForwardRetryTimes} 次")
+                                           McPortForward(Ip, Port, Desc, True)
+                                       Else
+                                           Log(ex, "[Link] Minecraft 端口转发线程异常", LogLevel.Hint)
+                                           IsMcPortForwardRunning = False
+                                       End If
+                                   End Try
+                               End Sub)
 
-        tr2 = New Thread(Async Sub()
-                             Dim c As Socket
-                             Dim s As Socket
-                             Try
-                                 While IsMcPortForwardRunning
-                                     c = ServerSocket.Accept()
-                                     s = New Socket(SocketType.Stream, ProtocolType.Tcp)
+        TcpThread = New Thread(Async Sub()
+                                   Dim c As Socket
+                                   Dim s As Socket
+                                   Try
+                                       While IsMcPortForwardRunning
+                                           c = ServerSocket.Accept()
+                                           s = New Socket(SocketType.Stream, ProtocolType.Tcp)
 
-                                     s.Connect(Sip)
-                                     Dim Count As Integer = 0
-                                     While Not s.Connected
-                                         If Count <= 5 Then
-                                             Count += 1
-                                             Await Task.Delay(1000)
-                                         Else
-                                             Log("[Link] 连接到目标 MC 服务器失败")
-                                             Return
-                                         End If
-                                     End While
-                                     RunInNewThread(Sub() Forward(c, s))
-                                     RunInNewThread(Sub() Forward(s, c))
-                                 End While
-                             Catch ex As Exception
-                                 If PortForwardRetryTimes < 4 Then
-                                     Log($"[Link] Minecraft 端口转发线程异常，放弃前再尝试 {3 - PortForwardRetryTimes} 次")
-                                     McPortForward(Ip, Port, Desc, True)
-                                 Else
-                                     Log(ex, "[Link] Minecraft 端口转发线程异常", LogLevel.Msgbox)
-                                     IsMcPortForwardRunning = False
-                                 End If
-                             End Try
-                         End Sub)
+                                           s.Connect(Sip)
+                                           Dim Count As Integer = 0
+                                           While Not s.Connected
+                                               If Count <= 5 Then
+                                                   Count += 1
+                                                   Await Task.Delay(1000)
+                                               Else
+                                                   Log("[Link] 连接到目标 MC 服务器失败")
+                                                   Return
+                                               End If
+                                           End While
+                                           RunInNewThread(Sub() Forward(c, s))
+                                           RunInNewThread(Sub() Forward(s, c))
+                                       End While
+                                   Catch ex As SocketException
+                                       If Not IsMcPortForwardRunning Then Exit Sub
+                                       Log("[Link] 疑似 MC 断开与创建者的连接，再次进行广播")
+                                       StartUdpBoardcast()
+                                   Catch ex As Exception
+                                       If Not IsMcPortForwardRunning Then Exit Sub
+                                       If PortForwardRetryTimes < 4 Then
+                                           Log($"[Link] Minecraft 端口转发线程异常，放弃前再尝试 {3 - PortForwardRetryTimes} 次")
+                                           McPortForward(Ip, Port, Desc, True)
+                                       Else
+                                           Log(ex, "[Link] Minecraft 端口转发线程异常", LogLevel.Hint)
+                                           IsMcPortForwardRunning = False
+                                       End If
+                                   End Try
+                               End Sub)
         Try
-            tr1.Start()
-            tr2.Start()
+            UdpThread.Start()
+            TcpThread.Start()
         Catch ex As Exception
             Log(ex, "[Link] 启动 MC 局域网广播失败")
             IsMcPortForwardRunning = False
         End Try
     End Sub
+    Private Sub StartUdpBoardcast()
+        Try
+            UdpThread.Start()
+        Catch ex As Exception
+            Log(ex, "[Link] 启动 MC 局域网广播失败")
+        End Try
+    End Sub
     Public Sub StopMcPortForward()
+        IsMcPortForwardRunning = False
         Log("[Link] 停止 MC 端口转发")
-        If tr1 IsNot Nothing Then
-            tr1.Abort()
-            tr1 = Nothing
+        If UdpThread IsNot Nothing Then
+            UdpThread.Abort()
+            UdpThread = Nothing
         End If
-        If tr2 IsNot Nothing Then
-            tr2.Abort()
-            tr2 = Nothing
+        If TcpThread IsNot Nothing Then
+            TcpThread.Abort()
+            TcpThread = Nothing
         End If
         If ChatClient IsNot Nothing Then
             ChatClient.Close()
@@ -934,7 +945,6 @@ PortRetry:
             fw_c.Close()
             fw_c = Nothing
         End If
-        IsMcPortForwardRunning = False
     End Sub
 
     Private fw_s As Socket = Nothing

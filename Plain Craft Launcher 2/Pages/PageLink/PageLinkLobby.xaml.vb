@@ -1,4 +1,6 @@
-﻿Public Class PageLinkLobby
+﻿Imports PCL.Core.Helper
+
+Public Class PageLinkLobby
     '记录的启动情况
     Public Shared IsHost As Boolean = False
     Public Shared RemotePort As String = Nothing
@@ -33,7 +35,10 @@
                                    Case 1
                                        Setup.Set("LinkEula", True)
                                    Case 2
-                                       RunInUi(Sub() FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch}))
+                                       RunInUi(Sub()
+                                                   FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch})
+                                                   FrmLinkLobby = Nothing
+                                               End Sub)
                                End Select
                            End If
                        End Sub)
@@ -270,7 +275,7 @@ Retry:
                        End Sub)
     End Sub
     'EasyTier Cli 轮询
-    Private Sub StartWatcherThread()
+    Public Sub StartETWatcher()
         RunInNewThread(Sub()
                            If IsHost Then
                                Log($"[Link] 本机角色：大厅创建者")
@@ -279,6 +284,11 @@ Retry:
                            End If
                            Log("[Link] 启动 EasyTier 轮询")
                            IsWatcherStarted = True
+                           Dim retryCount As Integer = 0
+                           While ETProcessPid Is Nothing AndAlso retryCount < 10
+                               Thread.Sleep(1000)
+                               retryCount += 1
+                           End While
                            While ETProcessPid IsNot Nothing
                                GetETInfo()
                                Thread.Sleep(15000)
@@ -286,7 +296,6 @@ Retry:
                            If ETProcessPid Is Nothing Then
                                RunInUi(Sub()
                                            CurrentSubpage = Subpages.PanSelect
-                                           If Not IsHost Then StopMcPortForward()
                                            Log("[Link] EasyTier 已退出")
                                        End Sub)
                            End If
@@ -328,6 +337,7 @@ Retry:
                 End If
                 If IsETFirstCheckFinished Then
                     Hint("大厅已被解散", HintType.Critical)
+                    ToastNotification.SendToast("大厅已被解散", "PCL CE 大厅")
                 Else
                     If IsHost Then
                         Hint("大厅创建失败", HintType.Critical)
@@ -419,7 +429,6 @@ Retry:
             IsETFirstCheckFinished = True
         Catch ex As Exception
             Log(ex, "[Link] EasyTier Cli 线程异常")
-            IsWatcherStarted = False
         End Try
     End Sub
 #End Region
@@ -489,34 +498,38 @@ Retry:
                                        BtnConnectType.Visibility = Visibility.Collapsed
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
-                                       LabFinishTitle.Text = "大厅创建中..."
-                                       LabFinishDesc.Text = $"您是大厅创建者，使用 {NaidProfile.Username} 的身份进行联机"
+                                       LabConnectUserName.Text = NaidProfile.Username
+                                       LabConnectUserType.Text = "创建者"
                                    End Sub)
-                           Dim Id As String = Nothing
-                           For index = 1 To 8 '生成 8 位随机编号
-                               Id += RandomInteger(0, 9).ToString()
+                           Dim id As String = Nothing
+                           For i = 1 To 8 '生成 8 位随机编号
+                               id += RandomInteger(0, 9).ToString()
                            Next
-                           LaunchLink(True, Id, LocalPort:=LocalPort)
-                           Dim RetryCount As Integer = 0
+                           Dim secret As String = Nothing
+                           For i = 1 To 2
+                               secret += RandomInteger(0, 9).ToString()
+                           Next
+                           LaunchLink(True, id, secret, LocalPort)
+                           Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
                                If DlEasyTierLoader IsNot Nothing AndAlso DlEasyTierLoader.State = LoadState.Loading Then Continue While
-                               If RetryCount > 10 Then
+                               If retryCount > 10 Then
                                    Hint("EasyTier 启动失败", HintType.Critical)
                                    RunInUi(Sub() BtnCreate.IsEnabled = True)
                                    ExitEasyTier()
                                    Exit Sub
                                End If
-                               RetryCount += 1
+                               retryCount += 1
                            End While
                            RunInUi(Sub()
                                        BtnCreate.IsEnabled = True
                                        CurrentSubpage = Subpages.PanFinish
-                                       LabFinishTitle.Text = "大厅已创建"
+                                       BtnFinishExit.Text = "关闭大厅"
                                        BtnCreate.IsEnabled = True
                                    End Sub)
                            Thread.Sleep(1000)
-                           StartWatcherThread()
+                           StartETWatcher()
                        End Sub)
     End Sub
 
@@ -526,7 +539,7 @@ Retry:
         If Not LobbyPrecheck() Then Exit Sub
         JoinedLobbyId = MyMsgBoxInput("输入大厅编号", HintText:="例如：01509230")
         If JoinedLobbyId = Nothing Then Exit Sub
-        If JoinedLobbyId.Length < 8 Then
+        If JoinedLobbyId.Length < 10 Then
             Hint("大厅编号不合法", HintType.Critical)
             Exit Sub
         End If
@@ -542,31 +555,33 @@ Retry:
                                        LabConnectType.Text = "连接中"
                                        CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                                        StackPlayerList.Children.Clear()
-                                       LabFinishTitle.Text = "加入大厅中..."
-                                       LabFinishDesc.Text = $"您是加入者，使用 {NaidProfile.Username} 的身份进行联机"
+                                       LabConnectUserName.Text = NaidProfile.Username
+                                       LabConnectUserType.Text = "加入者"
                                    End Sub)
-                           Dim Status As Integer = 1
-                           Status = LaunchLink(False, JoinedLobbyId, ETNetworkDefaultSecret & JoinedLobbyId)
-                           Dim RetryCount As Integer = 0
+                           Dim status As Integer = 1
+                           status = LaunchLink(False, JoinedLobbyId.Remove(JoinedLobbyId.Length - 2), JoinedLobbyId.Substring(JoinedLobbyId.Length - 2))
+                           Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
                                If DlEasyTierLoader IsNot Nothing AndAlso DlEasyTierLoader.State = LoadState.Loading Then Continue While
-                               If RetryCount > 10 Then
+                               If retryCount > 10 Then
                                    Hint("EasyTier 启动失败", HintType.Critical)
                                    RunInUi(Sub() BtnCreate.IsEnabled = True)
                                    ExitEasyTier()
                                    Exit Sub
                                End If
-                               RetryCount += 1
+                               retryCount += 1
                            End While
                            Thread.Sleep(1000)
-                           StartWatcherThread()
+                           StartETWatcher()
                            Thread.Sleep(500)
-                           While IsWatcherStarted AndAlso RemotePort Is Nothing
+                           While Not IsWatcherStarted OrElse RemotePort Is Nothing
                                Thread.Sleep(500)
                            End While
-                           If Status = 0 Then McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
-                           RunInUi(Sub() LabFinishTitle.Text = $"已加入 {Hostname} 的大厅")
+                           If status = 0 Then McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
+                           RunInUi(Sub()
+                                       BtnFinishExit.Text = $"退出 {Hostname} 的大厅"
+                                   End Sub)
                        End Sub)
         CurrentSubpage = Subpages.PanFinish
     End Sub
