@@ -70,7 +70,7 @@ Public Class PageVersionCompResource
         If CurrentCompType = CompType.Schematic AndAlso Not Setup.Get("UiSchematicFirstTimeHintShown") Then
             '显示首次打开提示
             RunInUi(Sub()
-                        MyMsgBox("现改为通过双击文件夹来进入子文件夹。", "操作提示", "我知道了")
+                        MyMsgBox("现改为双击文件夹进入子文件夹。", "操作提示", "我知道了")
                         Setup.Set("UiSchematicFirstTimeHintShown", True)
                     End Sub, True)
         End If
@@ -272,8 +272,16 @@ Public Class PageVersionCompResource
                 
                 '根据组件类型设置PanEmpty的文本内容
                 If CurrentCompType = CompType.Schematic Then
-                    TxtEmptyTitle.Text = "尚未安装资源"
-                    TxtEmptyDescription.Text = "你可以从已经下载好的文件安装资源。" & vbCrLf &  "如果你已经安装了资源，可能是版本隔离设置有误，请在设置中调整版本隔离选项。"
+                    '检查是否在子文件夹中
+                    If Not String.IsNullOrEmpty(CurrentFolderPath) Then
+                        '子文件夹为空的提示
+                        TxtEmptyTitle.Text = "该文件夹为空"
+                        TxtEmptyDescription.Text = "你可以从已经下载好的文件安装资源"
+                    Else
+                        '根目录为空的提示
+                        TxtEmptyTitle.Text = "尚未安装资源"
+                        TxtEmptyDescription.Text = "你可以从已经下载好的文件安装资源。" & vbCrLf &  "如果你已经安装了资源，可能是版本隔离设置有误，请在设置中调整版本隔离选项。"
+                    End If
                 Else
                     TxtEmptyTitle.Text = "尚未安装资源"
                     TxtEmptyDescription.Text = "你可以下载新的资源，也可以从已经下载好的文件安装资源。" & vbCrLf & "如果你已经安装了资源，可能是版本隔离设置有误，请在设置中调整版本隔离选项。"
@@ -342,17 +350,17 @@ Public Class PageVersionCompResource
         '点击事件
         AddHandler sender.Changed, AddressOf CheckChanged
         If sender.Entry.IsFolder Then
-            '文件夹项的点击事件：300ms内双击进入文件夹，否则切换选中状态
+            '文件夹项的点击事件：双击进入文件夹，单击切换选中状态
             Dim lastClickTime As DateTime = DateTime.MinValue
             AddHandler sender.Click, Sub(ss As MyLocalCompItem, ee As EventArgs)
                                          Dim currentTime = DateTime.Now
                                          Dim timeDiff = (currentTime - lastClickTime).TotalMilliseconds
                                          
-                                         If ss.Checked AndAlso timeDiff <= 300 Then
-                                             '已选中状态且300ms内再次点击，进入文件夹
+                                         If timeDiff <= 300 Then
+                                             '300ms内双击，进入文件夹
                                              EnterFolderWithCheck(ss.Entry.ActualPath)
                                          Else
-                                             '切换选中状态
+                                             '单击切换选中状态
                                              ss.Checked = Not ss.Checked
                                          End If
                                          
