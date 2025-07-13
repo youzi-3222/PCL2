@@ -65,6 +65,15 @@ Public Class PageVersionCompResource
         '非重复加载部分
         If IsLoad Then Return
         IsLoad = True
+        
+        '检查是否为原理图管理界面且首次打开
+        If CurrentCompType = CompType.Schematic AndAlso Not Setup.Get("UiSchematicFirstTimeHintShown") Then
+            '显示首次打开提示
+            RunInUi(Sub()
+                        MyMsgBox("现改为通过双击文件夹来进入子文件夹。", "操作提示", "我知道了")
+                        Setup.Set("UiSchematicFirstTimeHintShown", True)
+                    End Sub, True)
+        End If
 
         AddHandler FrmMain.KeyDown, AddressOf FrmMain_KeyDown
         '调整按钮边距（这玩意儿没法从 XAML 改）
@@ -333,8 +342,22 @@ Public Class PageVersionCompResource
         '点击事件
         AddHandler sender.Changed, AddressOf CheckChanged
         If sender.Entry.IsFolder Then
-            '文件夹项的点击事件：进入文件夹
-            AddHandler sender.Click, Sub(ss As MyLocalCompItem, ee As EventArgs) EnterFolderWithCheck(ss.Entry.ActualPath)
+            '文件夹项的点击事件：300ms内双击进入文件夹，否则切换选中状态
+            Dim lastClickTime As DateTime = DateTime.MinValue
+            AddHandler sender.Click, Sub(ss As MyLocalCompItem, ee As EventArgs)
+                                         Dim currentTime = DateTime.Now
+                                         Dim timeDiff = (currentTime - lastClickTime).TotalMilliseconds
+                                         
+                                         If ss.Checked AndAlso timeDiff <= 300 Then
+                                             '已选中状态且300ms内再次点击，进入文件夹
+                                             EnterFolderWithCheck(ss.Entry.ActualPath)
+                                         Else
+                                             '切换选中状态
+                                             ss.Checked = Not ss.Checked
+                                         End If
+                                         
+                                         lastClickTime = currentTime
+                                     End Sub
         Else
             '文件项的点击事件：切换选中状态
             AddHandler sender.Click, Sub(ss As MyLocalCompItem, ee As EventArgs) ss.Checked = Not ss.Checked
@@ -477,6 +500,17 @@ Public Class PageVersionCompResource
             BtnSelectDisable.IsEnabled = HasEnabled
             BtnSelectEnable.IsEnabled = HasDisabled
             BtnSelectUpdate.IsEnabled = HasUpdate
+            
+            '针对投影原理图隐藏分享 更新 收藏按钮
+            If CurrentCompType = CompType.Schematic Then
+                BtnSelectUpdate.Visibility = Visibility.Collapsed
+                BtnSelectFavorites.Visibility = Visibility.Collapsed
+                BtnSelectShare.Visibility = Visibility.Collapsed
+            Else
+                BtnSelectUpdate.Visibility = Visibility.Visible
+                BtnSelectFavorites.Visibility = Visibility.Visible
+                BtnSelectShare.Visibility = Visibility.Visible
+            End If
         End If
         '更新显示状态
         If AniControlEnabled = 0 Then

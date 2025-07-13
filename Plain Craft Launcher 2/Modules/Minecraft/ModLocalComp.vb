@@ -1214,6 +1214,12 @@ Finished:
         Public Function GetLogo() As String
             If Comp IsNot Nothing AndAlso Comp.LogoUrl IsNot Nothing Then Return Comp.LogoUrl
             If Logo IsNot Nothing Then Return Logo
+            
+            ' 为文件夹设置特定图标
+            If IsFolder Then
+                Return "pack://application:,,,/images/Icons/Folder.png"
+            End If
+            
             Return PathImage & "Icons/NoIcon.png"
         End Function
 
