@@ -1674,33 +1674,45 @@ Install:
         End Sub)
     End Sub
     
+#Region "原理图文件详细信息显示"
+
+    ''' <summary>
+    ''' 显示 Litematic 文件的详细信息
+    ''' </summary>
     Private Sub ShowLitematicDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
         
+        ' 显示原始名称（从 NBT Metadata/Name 读取）
         If ModEntry.LitematicOriginalName IsNot Nothing Then
             ContentLines.Add("原始名称：" & ModEntry.LitematicOriginalName)
         End If
         
+        ' 显示版本信息
         If ModEntry.LitematicVersion.HasValue Then
             ContentLines.Add("原理图版本：" & ModEntry.LitematicVersion.Value)
         End If
         
+        ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒大小：" & ModEntry.LitematicEnclosingSize)
         End If
          
+        ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
-        End If                       
+        End If
+        
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
         
+        ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
         End If
         
+        ' 显示时间信息
         If ModEntry.LitematicTimeCreated.HasValue Then
             Try
                 Dim createdTime As DateTime = DateTimeOffset.FromUnixTimeMilliseconds(ModEntry.LitematicTimeCreated.Value).ToLocalTime().DateTime
@@ -1720,26 +1732,37 @@ Install:
         End If
     End Sub
     
+    ''' <summary>
+    ''' 显示 Schem 文件的详细信息
+    ''' </summary>
     Private Sub ShowSchemDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
         
-        If ModEntry.StructureGameVersion IsNot Nothing Then
-            ContentLines.Add("游戏版本：" & ModEntry.StructureGameVersion)
+        ' 显示原始名称（从 NBT Metadata/Name 读取）
+        If ModEntry.SchemOriginalName IsNot Nothing Then
+            ContentLines.Add("原始名称：" & ModEntry.SchemOriginalName)
         End If
         
-        If ModEntry.StructureDataVersion.HasValue Then
-            ContentLines.Add("原理图版本：" & ModEntry.StructureDataVersion.Value)
+        ' 显示版本信息
+        If ModEntry.StructureGameVersion IsNot Nothing Then
+            ContentLines.Add("游戏版本：" & ModEntry.StructureGameVersion)
         End If
         
         If ModEntry.SpongeVersion.HasValue Then
             ContentLines.Add("Sponge版本：" & ModEntry.SpongeVersion.Value)
         End If
         
+        If ModEntry.StructureDataVersion.HasValue Then
+            ContentLines.Add("数据版本：" & ModEntry.StructureDataVersion.Value)
+        End If
+        
+        ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒尺寸：" & ModEntry.LitematicEnclosingSize)
         End If
         
+        ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
@@ -1748,25 +1771,27 @@ Install:
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
         
+        ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
-        End If
-        
-        If ModEntry.SchemOriginalName IsNot Nothing Then
-            ContentLines.Add("原始名称：" & ModEntry.SchemOriginalName)
         End If
         
         ContentLines.Add("文件类型：Sponge Schematic")
     End Sub
     
+    ''' <summary>
+    ''' 显示 Schematic 文件的详细信息
+    ''' </summary>
     Private Sub ShowSchematicDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
         
+        ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("大小：" & ModEntry.LitematicEnclosingSize)
         End If
         
+        ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
@@ -1774,24 +1799,37 @@ Install:
         If ModEntry.LitematicTotalVolume.HasValue Then
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
+        
+        ContentLines.Add("文件类型：MCEdit/WorldEdit Schematic")
     End Sub
     
+    ''' <summary>
+    ''' 显示 NBT 结构文件的详细信息
+    ''' </summary>
     Private Sub ShowNbtDetails(ContentLines As List(Of String), ModEntry As LocalCompFile)
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
         
+        ' 显示作者信息
+        If ModEntry.StructureAuthor IsNot Nothing Then
+            ContentLines.Add("作者：" & ModEntry.StructureAuthor)
+        End If
+        
+        ' 显示版本信息
         If ModEntry.StructureGameVersion IsNot Nothing Then
             ContentLines.Add("游戏版本：" & ModEntry.StructureGameVersion)
         End If
         
         If ModEntry.StructureDataVersion.HasValue Then
-            ContentLines.Add("原理图版本：" & ModEntry.StructureDataVersion.Value)
+            ContentLines.Add("数据版本：" & ModEntry.StructureDataVersion.Value)
         End If
         
+        ' 显示尺寸信息
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
             ContentLines.Add("包围盒尺寸：" & ModEntry.LitematicEnclosingSize)
         End If
         
+        ' 显示方块和体积统计
         If ModEntry.LitematicTotalBlocks.HasValue Then
             ContentLines.Add("总方块数：" & ModEntry.LitematicTotalBlocks.Value.ToString("N0"))
         End If
@@ -1800,16 +1838,15 @@ Install:
             ContentLines.Add("总体积：" & ModEntry.LitematicTotalVolume.Value.ToString("N0"))
         End If
         
+        ' 显示区域数量
         If ModEntry.LitematicRegionCount.HasValue Then
             ContentLines.Add("区域数量：" & ModEntry.LitematicRegionCount.Value)
         End If
         
-        If ModEntry.StructureAuthor IsNot Nothing Then
-            ContentLines.Add("作者：" & ModEntry.StructureAuthor)
-        End If
-        
         ContentLines.Add("文件类型：原版结构")
     End Sub
+
+#End Region
     
     Private Sub ShowDebugInfo(ContentLines As List(Of String), ModEntry As LocalCompFile)
         Dim DebugInfo As New List(Of String)
