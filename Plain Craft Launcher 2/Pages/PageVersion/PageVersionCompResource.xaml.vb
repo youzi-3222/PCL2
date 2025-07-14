@@ -1678,12 +1678,16 @@ Install:
         ContentLines.Add("")
         ContentLines.Add("详细信息：")
         
+        If ModEntry.LitematicOriginalName IsNot Nothing Then
+            ContentLines.Add("原始名称：" & ModEntry.LitematicOriginalName)
+        End If
+        
         If ModEntry.LitematicVersion.HasValue Then
             ContentLines.Add("原理图版本：" & ModEntry.LitematicVersion.Value)
         End If
         
         If ModEntry.LitematicEnclosingSize IsNot Nothing Then
-            ContentLines.Add("大小：" & ModEntry.LitematicEnclosingSize)
+            ContentLines.Add("包围盒大小：" & ModEntry.LitematicEnclosingSize)
         End If
          
         If ModEntry.LitematicTotalBlocks.HasValue Then
