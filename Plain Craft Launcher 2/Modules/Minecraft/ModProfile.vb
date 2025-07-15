@@ -606,9 +606,13 @@ Write:
                 }
             ElseIf AuthType = McLoginType.Ms Then
                 If McLoginMsLoader.State = LoadState.Finished Then
-                    Return New McLoginMs With {.OAuthId = SelectedProfile.IdentityId,
-                        .UserName = SelectedProfile.Username, .AccessToken = SelectedProfile.AccessToken,
-                        .Uuid = SelectedProfile.Uuid, .ProfileJson = SelectedProfile.RawJson}
+                    Return New McLoginMs With {
+                        .OAuthId = SelectedProfile.IdentityId,
+                        .UserName = SelectedProfile.Username,
+                        .AccessToken = SelectedProfile.AccessToken,
+                        .Uuid = SelectedProfile.Uuid,
+                        .ProfileJson = SelectedProfile.RawJson
+                    }
                 Else
                     Return New McLoginMs With {.OAuthId = SelectedProfile.IdentityId, .UserName = SelectedProfile.Name}
                 End If

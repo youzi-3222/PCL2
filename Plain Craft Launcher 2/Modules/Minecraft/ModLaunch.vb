@@ -571,7 +571,13 @@ NextInner:
             ProfileList(ProfileIndex).IdentityId = OAuthId
         End If
         SaveProfile()
-        Data.Output = New McLoginResult With {.AccessToken = AccessToken, .Name = Result(1), .Uuid = Result(0), .Type = "Microsoft", .ClientToken = Result(0), .ProfileJson = Result(2)}
+        Data.Output = New McLoginResult With {
+            .AccessToken = AccessToken,
+            .Name = Result(1),
+            .Uuid = Result(0),
+            .Type = "Microsoft",
+            .ClientToken = Result(0),
+            .ProfileJson = Result(2)}
 SkipLogin:
         '结束
         McLoginMsRefreshTime = GetTimeTick()
@@ -610,7 +616,7 @@ SkipLogin:
 
         '控制流程
         Try
-            If String.IsNullOrEmpty(Data.Input.AccessToken) OrElse String.IsNullOrEmpty(Data.Input.UserName) Then
+            If String.IsNullOrEmpty(Data.Input.OAuthId) Then
                 ProfileLog("没有账号信息，直接进行全新登录流程")
             Else
                 Return Await MsLoginStep1TrySilentLogin(App, Data)
@@ -664,7 +670,7 @@ SkipLogin:
             GoTo Exception
         End Try
         FrmMain.ShowWindowToTop()
-
+        Throw New Exception("$$")
 Exception:
         Dim IsIgnore As Boolean = False
         RunInUiWait(Sub()
