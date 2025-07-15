@@ -68,7 +68,7 @@ Public Module ModLink
 
                         ' 读取varInt头部
                         latency.Start()
-                        Dim packetLength = VarInt.ReadFromStream(stream)
+                        Dim packetLength = Await VarInt.ReadFromStream(stream)
                         latency.Stop()
                         If DoLog Then Log($"[MCPing] Got packet length ({packetLength})", LogLevel.Debug)
 

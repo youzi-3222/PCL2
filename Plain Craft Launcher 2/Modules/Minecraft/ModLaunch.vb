@@ -837,12 +837,12 @@ Exception:
         Dim Result As String
         Try
             Result = NetRequestRetry("https://api.minecraftservices.com/authentication/login_with_xbox", "POST", Request, "application/json")
-        Catch ex As Net.WebException
+        Catch ex As PCL.ModNet.HttpWebException
             Dim Message As String = GetExceptionSummary(ex)
-            If Message.Contains("(429)") Then
+            If CType(ex.StatusCode, Integer) = 429 Then
                 Log(ex, "正版验证 Step 4 汇报 429")
                 Throw New Exception("$登录尝试太过频繁，请等待几分钟后再试！")
-            ElseIf Message.Contains("(403)") Then
+            ElseIf ex.StatusCode = HttpStatusCode.NotFound Then
                 Log(ex, "正版验证 Step 4 汇报 403")
                 Throw New Exception("$当前 IP 的登录尝试异常。" & vbCrLf & "如果你使用了 VPN 或加速器，请把它们关掉或更换节点后再试！")
             Else
@@ -896,12 +896,12 @@ Exception:
         Dim Result As String
         Try
             Result = NetRequestRetry("https://api.minecraftservices.com/minecraft/profile", "GET", "", "application/json", False, New Dictionary(Of String, String) From {{"Authorization", "Bearer " & AccessToken}})
-        Catch ex As Net.WebException
+        Catch ex As PCL.ModNet.HttpWebException
             Dim Message As String = GetExceptionSummary(ex)
-            If Message.Contains("(429)") Then
+            If CType(ex.StatusCode, Integer) = 429 Then '微软！我的 TooManyRequests 枚举呢？
                 Log(ex, "正版验证 Step 6 汇报 429")
                 Throw New Exception("$登录尝试太过频繁，请等待几分钟后再试！")
-            ElseIf Message.Contains("(404)") Then
+            ElseIf ex.StatusCode = HttpStatusCode.NotFound Then
                 Log(ex, "正版验证 Step 6 汇报 404")
                 RunInNewThread(
                 Sub()
