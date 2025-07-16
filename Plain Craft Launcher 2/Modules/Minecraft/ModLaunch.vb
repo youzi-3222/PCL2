@@ -622,61 +622,53 @@ SkipLogin:
                 Return Await MsLoginStep1TrySilentLogin(App, Data)
             End If
         Catch ex As MsalUiRequiredException
-            If ex.ErrorCode = -1 Then
-                ProfileLog("不存在缓存的账号信息，进行全新登录流程")
-            Else
-                ProfileLog("静默登录出现异常" & ex.ToString().Replace(OAuthClientId, ""))
-                Hint("静默登录出现异常！", HintType.Critical)
-            End If
+            ProfileLog("不存在缓存的账号信息，进行全新登录流程")
         Catch ex As Exception
             ProfileLog("静默登录出现异常" & ex.ToString().Replace(OAuthClientId, ""))
-            Hint("静默登录出现异常！", HintType.Critical)
+            Hint("静默登录不成功！", HintType.Critical)
         End Try
-
+        Dim ErrorMsg As String = String.Empty
         Try
             Return Await MsLoginStep1HandleInteractiveLogin(App)
         Catch ex As MsalClientException
             If ex.Message.Contains("User canceled authentication") Then
-                Hint("你关闭了验证弹窗...", HintType.Critical)
+                ErrorMsg = "你关闭了验证弹窗..."
             Else
                 If Setup.Get("LoginMsAuthType") = 0 Then
-                    Hint("正版验证出错，你可以前往启动器设置 - 启动，将正版验证方式改为⌈设备代码流⌋再试！" & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                    ErrorMsg = "正版验证出错，你可以前往启动器设置 - 启动，将正版验证方式改为⌈设备代码流⌋再试！" & ex.ToString().Replace(OAuthClientId, "")
                 Else
-                    Hint("正版验证出错，请重新尝试：" & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                    ErrorMsg = "正版验证出错，请重新尝试：" & ex.ToString().Replace(OAuthClientId, "")
                 End If
-                GoTo Exception
             End If
         Catch ex As MsalServiceException
             If ex.Message.Contains("authorization_declined") Or ex.Message.Contains("access_denied") Then
-                Hint("你拒绝了 PCL 申请的权限……", HintType.Critical)
+                ErrorMsg = ErrorMsg = "你拒绝了 PCL 申请的权限……"
             ElseIf ex.Message.Contains("expired_token") Then
-                Hint("登录用时太长啦，重新试试吧！", HintType.Critical)
+                ErrorMsg = "登录用时太长啦，重新试试吧！"
             ElseIf ex.Message.Contains("service abuse") Then
-                Hint("非常抱歉，该账号已被微软封禁，无法登录", HintType.Critical)
+                ErrorMsg = "非常抱歉，该账号已被微软封禁，无法登录"
             Else
                 If Setup.Get("LoginMsAuthType") = 0 Then
-                    Hint("正版验证出错，你可以前往启动器 设置 -> 启动 -> 启动选项 -> 正版验证方式 中将其改为 ⌈设备代码流⌋ 后再试！" & vbCrLf & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                    ErrorMsg = "正版验证出错，你可以前往启动器 设置 -> 启动 -> 启动选项 -> 正版验证方式 中将其改为 ⌈设备代码流⌋ 后再试！" & vbCrLf & ex.ToString().Replace(OAuthClientId, "")
                 Else
-                    Hint("正版验证出错，请重新尝试：" & vbCrLf & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                    ErrorMsg = "正版验证出错，请重新尝试：" & vbCrLf & ex.ToString().Replace(OAuthClientId, "")
                 End If
-                GoTo Exception
             End If
         Catch ex As Exception
             If Setup.Get("LoginMsAuthType") = 0 Then
-                Hint("正版验证出错，你可以前往启动器设置 - 启动，将正版验证方式改为⌈设备代码流⌋再试！" & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                ErrorMsg = "正版验证出错，你可以前往启动器设置 - 启动，将正版验证方式改为⌈设备代码流⌋再试！" & ex.ToString().Replace(OAuthClientId, "")
             Else
-                Hint("正版验证出错，请重新尝试：" & ex.ToString().Replace(OAuthClientId, ""), HintType.Critical)
+                ErrorMsg = "正版验证出错，请重新尝试：" & ex.ToString().Replace(OAuthClientId, "")
             End If
-            GoTo Exception
         End Try
         FrmMain.ShowWindowToTop()
-        Throw New Exception("$$")
-Exception:
         Dim IsIgnore As Boolean = False
-        RunInUiWait(Sub()
-                        If Not IsLaunching Then Exit Sub
-                        If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
-                    End Sub)
+        If Not String.IsNullOrWhiteSpace(ErrorMsg) Then
+            RunInUiWait(Sub()
+                            If Not IsLaunching Then Exit Sub
+                            If MyMsgBox($"启动器在尝试刷新账号信息时遇到了网络错误。{vbCrLf}你可以选择取消，检查网络后再次启动，也可以选择忽略错误继续启动，但可能无法游玩部分服务器。", "账号信息获取失败", "继续", "取消") = 1 Then IsIgnore = True
+                        End Sub)
+        End If
         If IsIgnore Then
             Return Nothing
         Else
@@ -693,7 +685,9 @@ Exception:
         Select Case Setup.Get("LoginMsAuthType")
             Case 0 : Return Await app.AcquireTokenInteractive(MsLoginStep1Scopes).ExecuteAsync()
             Case 1 : Return Await MsLoginStep1RunDeviceCodeFlow(app)
-            Case Else : Throw New NotImplementedException()
+            Case Else
+                Setup.Reset("LoginMsAuthType")
+                Throw New Exception($"配置项文件错误，已重置登录选项配置，请重新完成登录操作")
         End Select
     End Function
     Private Async Function MsLoginStep1RunDeviceCodeFlow(app As IPublicClientApplication) As Task(Of AuthenticationResult)
@@ -714,6 +708,9 @@ Exception:
                 WaitingMyMsgBox.Add(Converter)
                 While Converter.Result Is Nothing
                     Await Task.Delay(200)
+                    If DateTimeOffset.Now > deviceCodeResult.ExpiresOn Then
+                        Throw New Exception("登录已超时，请重新发起登录请求")
+                    End If
                 End While
                 ProfileLog("设备代码流已返回结果")
                 If TypeOf Converter.Result Is RestartException Then
