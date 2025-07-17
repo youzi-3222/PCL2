@@ -1544,13 +1544,43 @@
         })
     End Function
 
-    'Mod 下载源
+    ''' <summary>
+    ''' Mod Api 镜像源
+    ''' </summary>
+    ''' <param name="Original"></param>
+    ''' <returns></returns>
     Public Function DlSourceModGet(Original As String) As String
         Return Original.
                 Replace("https://api.modrinth.com", "https://mod.mcimirror.top/modrinth").
                 Replace("https://api.curseforge.com", "https://mod.mcimirror.top/curseforge")
     End Function
-
+    ''' <summary>
+    ''' Mod 下载镜像源
+    ''' </summary>
+    ''' <param name="original"></param>
+    ''' <returns></returns>
+    Public Function DlSourceModDownloadGet(original As String) As List(Of String)
+        Dim res As New List(Of String)
+        Dim mirrorDl = original.
+                Replace("https://cdn.modrinth.com", "https://mod.mcimirror.top"). 'like https://cdn.modrinth.com/data/P7dR8mSH/versions/X2hTodix/fabric-api-0.129.0%2B1.21.8.jar
+                Replace("https://edge.forgecdn.net", "https://mod.mcimirror.top") 'like https://edge.forgecdn.net/files/6767/951/jei-1.21.5-neoforge-21.4.0.27.jar
+        Select Case Setup.Get("ToolDownloadMod")
+            Case 0 '镜像源
+                res.Add(mirrorDl)
+                res.Add(mirrorDl)
+            Case 1 '平衡
+                res.Add(original)
+                res.Add(mirrorDl)
+            Case 2 '官方源
+                res.Add(original)
+                res.Add(original)
+            Case Else '错误
+                Setup.Reset("ToolDownloadMod")
+                res.Add(original)
+        End Select
+        res.Add(original)
+        Return res
+    End Function
     'Loader 自动切换
     Private Sub DlSourceLoader(Of InputType, OutputType)(MainLoader As LoaderTask(Of InputType, OutputType),
                                                          LoaderList As List(Of KeyValuePair(Of LoaderTask(Of InputType, OutputType), Integer)),

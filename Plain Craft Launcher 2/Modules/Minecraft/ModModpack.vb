@@ -436,9 +436,9 @@ Retry:
                 End Select
             End If
             '添加下载文件
-            Dim Urls = File("downloads").SelectMany(Function(x) CompFile.HandleCurseForgeDownloadUrls(x.ToString())).ToList()
-            Urls.AddRange(Urls.Select(Function(u) DlSourceModGet(u)).ToList)
-            Urls = Urls.Distinct.ToList()
+            Dim Urls = File("downloads").Select(Function(x) CompFile.HandleCurseForgeDownloadUrls(x.ToString())).ToList()
+            '镜像源
+            Urls = Urls.SelectMany(Function(x) DlSourceModDownloadGet(x))
             Dim TargetPath As String = $"{PathMcFolder}versions\{VersionName}\{File("path")}"
             If Not IO.Path.GetFullPath(TargetPath).StartsWithF($"{PathMcFolder}versions\{VersionName}\", True) Then
                 MyMsgBox($"整合包的文件路径超出了版本文件夹，请向整合包作者反馈此问题！" & vbCrLf & "错误的文件：" & TargetPath, "文件路径校验失败", IsWarn:=True)
