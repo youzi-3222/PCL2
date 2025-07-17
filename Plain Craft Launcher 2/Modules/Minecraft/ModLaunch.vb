@@ -2205,10 +2205,11 @@ NextVersion:
 
     End Sub
     Private Sub McLaunchRun(Loader As LoaderTask(Of Integer, Process))
+        Dim noJavaw As Boolean = Setup.Get("LaunchAdvanceNoJavaw")
 
         '启动信息
         Dim GameProcess = New Process()
-        Dim StartInfo As New ProcessStartInfo(McLaunchJavaSelected.JavawExePath)
+        Dim StartInfo As New ProcessStartInfo(If(noJavaw, McLaunchJavaSelected.JavaExePath, McLaunchJavaSelected.JavawExePath))
 
         '设置环境变量
         Dim Paths As New List(Of String)(StartInfo.EnvironmentVariables("Path").Split(";"))
@@ -2221,7 +2222,7 @@ NextVersion:
         StartInfo.UseShellExecute = False
         StartInfo.RedirectStandardOutput = True
         StartInfo.RedirectStandardError = True
-        StartInfo.CreateNoWindow = False
+        StartInfo.CreateNoWindow = noJavaw
         StartInfo.Arguments = McLaunchArgument
         GameProcess.StartInfo = StartInfo
 
