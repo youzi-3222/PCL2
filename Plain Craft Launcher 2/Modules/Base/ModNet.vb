@@ -54,6 +54,10 @@ Public Module ModNet
                 _httpClientHandler = New HttpClientHandler() With {
                                                 .Proxy = GetProxy(),
                                                 .MaxConnectionsPerServer = 1024,
+                                                .SslProtocols = System.Security.Authentication.SslProtocols.Tls13 Or
+                                                    System.Security.Authentication.SslProtocols.Tls12 Or
+                                                    System.Security.Authentication.SslProtocols.Tls11 Or
+                                                    System.Security.Authentication.SslProtocols.Tls,
                                                 .AutomaticDecompression = DecompressionMethods.GZip Or DecompressionMethods.Deflate,
                                                 .AllowAutoRedirect = True,
                                                 .UseCookies = True,
