@@ -1,4 +1,5 @@
 ﻿Imports PCL.Core.Helper
+Imports PCL.Core.Extension
 Imports PCL.Core.Utils.Minecraft
 Imports PCL.Core.Model
 
@@ -6,12 +7,11 @@ Public Class PageLinkLobby
     '记录的启动情况
     Public Shared IsHost As Boolean = False
     Public Shared RemotePort As String = Nothing
+    Public Shared JoinerLocalPort As Integer = Nothing
     Public Shared Hostname As String = Nothing
-    Public Shared IsLoading As Boolean = False
     Public Shared IsConnected As Boolean = False
     Public Shared LocalInfo As ETPlayerInfo = Nothing
     Public Shared HostInfo As ETPlayerInfo = Nothing
-    Public Shared IsEasyTierExist As Boolean = False
 
 #Region "初始化"
 
@@ -23,9 +23,11 @@ Public Class PageLinkLobby
     End Sub
 
     Public IsLoad As Boolean = False
+    Private IsLoading As Boolean = False
     Public Sub Reload() Handles Me.Loaded
-        If IsLoad Then Exit Sub
+        If IsLoad OrElse IsLoading Then Exit Sub
         IsLoad = True
+        IsLoading = True
         HintAnnounce.Visibility = Visibility.Visible
         HintAnnounce.Text = "正在连接到大厅服务器..."
         HintAnnounce.Theme = MyHint.Themes.Blue
@@ -55,23 +57,14 @@ Public Class PageLinkLobby
             End If
         End If
         DetectMcInstance()
-        CheckEasyTier()
+        IsLoading = False
     End Sub
     Private Sub OnPageExit() Handles Me.PageExit
         IsMcWatcherRunning = False
     End Sub
-    Private Sub CheckEasyTier()
-        If (Not File.Exists(ETPath & "\easytier-core.exe")) OrElse (Not File.Exists(ETPath & "\easytier-cli.exe")) OrElse (Not File.Exists(ETPath & "\wintun.dll")) Then
-            Log("[Link] EasyTier 不存在，开始下载")
-            Hint("正在下载联机所需组件...")
-            IsEasyTierExist = False
-            BtnCreate.IsEnabled = False
-            BtnSelectJoin.IsEnabled = False
-            DownloadEasyTier(False)
-        Else
-            IsEasyTierExist = True
-        End If
-    End Sub
+    Private Function IsEasyTierExists()
+        Return File.Exists(ETPath & "\easytier-core.exe") AndAlso File.Exists(ETPath & "\easytier-cli.exe") AndAlso File.Exists(ETPath & "\wintun.dll")
+    End Function
 #End Region
 
 #Region "加载步骤"
@@ -92,7 +85,7 @@ Public Class PageLinkLobby
 #End Region
 
 #Region "公告"
-    Public Const AllowedVersion As Integer = 1
+    Public Const AllowedVersion As Integer = 2
     Public Sub GetAnnouncement()
         RunInNewThread(Sub()
                            RunInUi(Sub() HintAnnounce.Visibility = Visibility.Visible)
@@ -197,7 +190,7 @@ Retry:
         Return NewItem
     End Function
     Private Sub PlayerInfoClick(sender As MyListItem, e As EventArgs)
-        MyMsgBox($"Natayark ID：{sender.Tag.NaidName}{If(sender.Tag.McName IsNot Nothing, "，启动器使用的 MC 档案名称：" & sender.Tag.McName, "")}{vbCrLf}延迟：{sender.Tag.Ping}ms，丢包率：{sender.Tag.Loss}%，连接方式：{GetConnectTypeChinese(sender.Tag.Cost)}，NAT 类型：{GetNatTypeChinese(sender.Tag.NatType)}",
+        MyMsgBox($"{If(sender.Tag.NaidName IsNot Nothing, "Natayark ID：" & sender.Tag.NaidName, "来自其他启动器")}{If(sender.Tag.McName IsNot Nothing, "，启动器使用的 MC 档案名称：" & sender.Tag.McName, "")}{vbCrLf}延迟：{sender.Tag.Ping}ms，丢包率：{sender.Tag.Loss}%，连接方式：{GetConnectTypeChinese(sender.Tag.Cost)}，NAT 类型：{GetNatTypeChinese(sender.Tag.NatType)}",
                  $"玩家 {sender.Tag.NaidName} 的详细信息")
     End Sub
 #End Region
@@ -245,8 +238,11 @@ Retry:
     Private IsWatcherStarted As Boolean = False
     Private IsMcWatcherRunning As Boolean = False
     Public Shared IsETFirstCheckFinished As Boolean = False
+    Private IsDetectingMc As Boolean = False
     '检测本地 MC 局域网实例
     Private Sub DetectMcInstance() Handles BtnRefresh.Click
+        If IsDetectingMc Then Exit Sub
+        IsDetectingMc = True
         ComboWorldList.Items.Clear()
         ComboWorldList.Items.Add(New MyComboBoxItem With {.Tag = Nothing, .Content = "正在检测本地游戏...", .Height = 18, .Margin = New Thickness(8, 4, 0, 0)})
         ComboWorldList.SelectedIndex = 0
@@ -268,13 +264,13 @@ Retry:
                                                                         .Tag = World,
                                                                         .Content = $"{World.Item2.Description} ({World.Item2.Version.Name} / 端口 {World.Item1})"})
                                            Next
-                                           If IsEasyTierExist Then BtnCreate.IsEnabled = True
                                        End If
+                                       IsDetectingMc = False
                                        ComboWorldList.SelectedIndex = 0
                                        BtnRefresh.IsEnabled = True
                                        ComboWorldList.IsEnabled = True
                                    End Sub)
-                       End Sub)
+                       End Sub, "Minecraft Port Detect")
     End Sub
     'EasyTier Cli 轮询
     Public Sub StartETWatcher()
@@ -287,18 +283,22 @@ Retry:
                            Log("[Link] 启动 EasyTier 轮询")
                            IsWatcherStarted = True
                            Dim retryCount As Integer = 0
-                           While ETProcessPid Is Nothing AndAlso retryCount < 10
+                           While ETProcess Is Nothing AndAlso retryCount < 10
                                Thread.Sleep(1000)
                                retryCount += 1
                            End While
-                           While ETProcessPid IsNot Nothing
+                           While Not IsETReady
                                GetETInfo()
-                               Thread.Sleep(15000)
+                               Thread.Sleep(1000)
                            End While
-                           If ETProcessPid Is Nothing Then
+                           While ETProcess IsNot Nothing
+                               GetETInfo()
+                               Thread.Sleep(10000)
+                           End While
+                           If ETProcess Is Nothing Then
                                RunInUi(Sub()
                                            CurrentSubpage = Subpages.PanSelect
-                                           Log("[Link] EasyTier 已退出")
+                                           Log("[Link] [ETWatcher] ETProcess 为 null，EasyTier 可能已退出")
                                        End Sub)
                            End If
                            Log("[Link] EasyTier 轮询已结束")
@@ -311,7 +311,7 @@ Retry:
                                    .StartInfo = New ProcessStartInfo With {
                                        .FileName = $"{ETPath}\easytier-cli.exe",
                                        .WorkingDirectory = ETPath,
-                                       .Arguments = "peer",
+                                       .Arguments = "-o json peer",
                                        .ErrorDialog = False,
                                        .CreateNoWindow = True,
                                        .WindowStyle = ProcessWindowStyle.Hidden,
@@ -330,7 +330,7 @@ Retry:
             Dim ETCliOutput As String = Nothing
             ETCliOutput = ETCliProcess.StandardOutput.ReadToEnd() & ETCliProcess.StandardError.ReadToEnd()
             'Log($"[Link] 获取到 EasyTier Cli 信息: {vbCrLf}" + ETCliOutput)
-            If Not ETCliOutput.Contains("10.114.51.41/24") Then
+            If Not ETCliOutput.Contains("10.114.51.41") Then
                 If Not IsETFirstCheckFinished AndAlso RemainRetry > 0 Then
                     Log($"[Link] 未找到大厅创建者 IP，可能是并不存在该大厅，放弃前再重试 {RemainRetry} 次")
                     Thread.Sleep(1000)
@@ -351,6 +351,7 @@ Retry:
                             CardPlayerList.Title = "大厅成员列表（正在获取信息）"
                             StackPlayerList.Children.Clear()
                             CurrentSubpage = Subpages.PanSelect
+                            Log("[Link] [ETInfo] 大厅不存在或已被解散，返回选择界面")
                         End Sub)
                 ExitEasyTier()
                 Exit Sub
@@ -358,27 +359,25 @@ Retry:
             '查询大厅成员信息
             Dim PlayerNum As Integer = 0
             Dim PlayerList As New List(Of ETPlayerInfo)
-            'e.g. │ ipv4 │ hostname │ cost │ lat_ms │ loss_rate │ rx_bytes │ tx_bytes │ tunnel_proto │ nat_type │ id │ version │
-            For Each PlayerInfo In ETCliOutput.Split(New String(vbLf))
-                'Log("当前行：" & PlayerInfo)
-                If PlayerInfo.Contains("───────") OrElse PlayerInfo.ContainsF("hostname", True) OrElse String.IsNullOrWhiteSpace(PlayerInfo) Then Continue For
-                Dim s = PlayerInfo.Split("│")
-                If s(2).Trim().Contains("PublicServer") Then Continue For '服务器
-                Dim ETInfo As New ETPlayerInfo With {
-                    .IsHost = Not s(2).Trim().StartsWithF("J-", True),
-                    .Hostname = s(2).Trim(),
-                    .Cost = s(3).BeforeLast("(").Trim(),
-                    .Ping = Math.Round(Val(s(4).Trim())),
-                    .Loss = Math.Round(Val(s(5).Trim()) * 100, 1),
-                    .NatType = s(9).Trim(),
-                    .McName = If(s(2).Split("-").Length = 3, s(2).Split("-")(2).Trim(), Nothing),
-                    .NaidName = s(2).Trim().Split("-")(1).Trim()
+            Dim cliJson As JArray = JArray.Parse(ETCliOutput)
+            For Each p In cliJson
+                If p("hostname").Contains("PublicServer") Then Continue For '服务器
+                Dim hostnameStatus As Integer = p("hostname").ToString().Split("-").Length
+                Dim info As New ETPlayerInfo With {
+                    .IsHost = Not p("hostname").ToString().StartsWithF("J-", True),
+                    .Hostname = p("hostname"),
+                    .Cost = p("cost").ToString().BeforeLast("("),
+                    .Ping = Math.Round(Val(p("lat_ms"))),
+                    .Loss = Math.Round(Val(p("loss_rate")) * 100, 1),
+                    .NatType = p("nat_type"),
+                    .McName = If(hostnameStatus = 3, p("hostname").ToString().Split("-")(2), Nothing),
+                    .NaidName = If(hostnameStatus = 3 OrElse hostnameStatus = 2, p("hostname").ToString().Split("-")(1), Nothing)
                 }
-                If ETInfo.Cost.ContainsF("Local", True) Then LocalInfo = ETInfo
-                If ETInfo.IsHost Then
-                    HostInfo = ETInfo
+                If info.Cost = "Local" Then LocalInfo = info
+                If info.IsHost Then
+                    HostInfo = info
                 Else
-                    PlayerList.Add(ETInfo)
+                    PlayerList.Add(info)
                 End If
                 PlayerNum += 1
             Next
@@ -397,7 +396,6 @@ Retry:
                 Quality -= 1
             End If
             RunInUi(Sub() LabFinishQuality.Text = GetQualityDesc(Quality))
-            RemotePort = HostInfo.Hostname.Split("-")(0)
             Hostname = HostInfo.NaidName
             If IsHost Then '确认创建者实例存活状态
                 Dim test As New McPing("127.0.0.1", LocalPort)
@@ -413,20 +411,26 @@ Retry:
                     MyMsgBox("由于你关闭了联机中的 MC 实例，大厅已自动解散。", "大厅已解散")
                 End If
             End If
+            '加入方刷新连接信息
+            RunInUi(Sub()
+                        If Not IsETReady AndAlso Not HostInfo.Ping = 200 Then
+                            IsETReady = True
+                        ElseIf Not IsETReady AndAlso HostInfo.Ping = 200 Then '如果 ET 还未就绪，则显示延迟为 0，防止用户找茬
+                            HostInfo.Ping = 0
+                        End If
+                        LabFinishPing.Text = HostInfo.Ping.ToString() & "ms"
+                        LabConnectType.Text = GetConnectTypeChinese(HostInfo.Cost)
+                    End Sub)
             '刷新大厅成员列表 UI
             RunInUi(Sub()
                         StackPlayerList.Children.Clear()
                         StackPlayerList.Children.Add(PlayerInfoItem(HostInfo, AddressOf PlayerInfoClick))
                         For Each Player In PlayerList
+                            If Not IsETReady AndAlso Player.Ping = 200 Then Player.Ping = 0 '如果 ET 还未就绪，则显示延迟为 0，防止用户找茬
                             Dim NewItem = PlayerInfoItem(Player, AddressOf PlayerInfoClick)
                             StackPlayerList.Children.Add(NewItem)
                         Next
                         CardPlayerList.Title = $"大厅成员列表（共 {PlayerNum} 人）"
-                    End Sub)
-            '加入方刷新连接信息
-            RunInUi(Sub()
-                        LabFinishPing.Text = HostInfo.Ping.ToString() & "ms"
-                        LabConnectType.Text = GetConnectTypeChinese(HostInfo.Cost)
                     End Sub)
             IsETFirstCheckFinished = True
         Catch ex As Exception
@@ -438,61 +442,22 @@ Retry:
 #Region "PanSelect | 种类选择页面"
 
     Public LocalPort As String = Nothing
-    Public Sub CheckFirewall()
-        '检查防火墙
-        Dim CheckFirewall As New Process With {
-             .StartInfo = New ProcessStartInfo With {
-                 .Verb = "runas",
-                 .FileName = "cmd",
-                 .CreateNoWindow = True,
-                 .UseShellExecute = False,
-                 .Arguments = "/c netsh advfirewall show currentprofile state",
-                 .RedirectStandardOutput = True,
-                 .RedirectStandardError = True
-             }
-        }
-        CheckFirewall.Start()
-        Dim Output As String = CheckFirewall.StandardOutput.ReadToEnd()
-        Output &= CheckFirewall.StandardError.ReadToEnd()
-        If Output.ContainsF("关闭", True) OrElse Output.ContainsF("off", True) OrElse Output.ContainsF("disable", True) Then
-            Dim Choice As Integer = MyMsgBox($"Windows 防火墙当前处于关闭状态，这可能带来安全风险。{vbCrLf}是否要开启防火墙？", "防火墙未开启", "开启防火墙并继续", "不开启防火墙并继续", "取消操作并返回", ForceWait:=True, IsWarn:=True)
-            Select Case Choice
-                Case 1
-                    '开启防火墙
-                    Dim EnableFirewall As New Process With {
-                        .StartInfo = New ProcessStartInfo With {
-                            .Verb = "runas",
-                            .FileName = "cmd",
-                            .CreateNoWindow = True,
-                            .UseShellExecute = False,
-                            .Arguments = "/c netsh advfirewall set currentprofile state on",
-                            .RedirectStandardOutput = True,
-                            .RedirectStandardError = True
-                        }
-                    }
-                    EnableFirewall.Start()
-                    EnableFirewall.WaitForExit()
-                    Log("[Link] 已开启 Windows 防火墙")
-                Case 2
-                    Log("[Link] 不更改 Windows 防火墙配置，继续操作")
-                Case 3
-                    Log("[Link] 不更改 Windows 防火墙配置，中止流程")
-                    RunInUi(Sub() BtnCreate.IsEnabled = True)
-                    Exit Sub
-            End Select
-        End If
-    End Sub
-    '创建房间
+    '创建大厅
     Private Sub BtnSelectCreate_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles BtnCreate.Click
-        If Not LobbyPrecheck() Then Exit Sub
         BtnCreate.IsEnabled = False
-        IsLoading = True
+        If Not LobbyPrecheck() Then
+            BtnCreate.IsEnabled = True
+            Exit Sub
+        End If
+        If ComboWorldList.SelectedItem.ToString() = "无可用实例" OrElse ComboWorldList.SelectedItem.ToString() = "正在检测本地游戏..." Then
+            Hint("请先启动并选择一个可用的 MC 联机实例！", HintType.Critical)
+            Exit Sub
+        End If
         LocalPort = CType(ComboWorldList.SelectedItem.Tag, Tuple(Of Integer, McPingResult)).Item1.ToString()
         Log("[Link] 创建大厅，端口：" & LocalPort)
         IsHost = True
         RunInNewThread(Sub()
                            'CreateNATTranversal(LocalPort)
-                           CheckFirewall()
                            RunInUi(Sub()
                                        SplitLineBeforePing.Visibility = Visibility.Collapsed
                                        BtnFinishPing.Visibility = Visibility.Collapsed
@@ -536,18 +501,17 @@ Retry:
     End Sub
 
     Public JoinedLobbyId As String = Nothing
-    '加入房间
+    '加入大厅
     Private Sub BtnSelectJoin_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles BtnSelectJoin.MouseLeftButtonUp
         If Not LobbyPrecheck() Then Exit Sub
         JoinedLobbyId = MyMsgBoxInput("输入大厅编号", HintText:="例如：0150923014")
         If JoinedLobbyId = Nothing Then Exit Sub
-        If JoinedLobbyId.Length < 10 Then
+        If JoinedLobbyId.Length < 9 Then
             Hint("大厅编号不合法", HintType.Critical)
             Exit Sub
         End If
         IsHost = False
         RunInNewThread(Sub()
-                           CheckFirewall()
                            RunInUi(Sub()
                                        SplitLineBeforePing.Visibility = Visibility.Visible
                                        BtnFinishPing.Visibility = Visibility.Visible
@@ -560,8 +524,9 @@ Retry:
                                        LabConnectUserName.Text = NaidProfile.Username
                                        LabConnectUserType.Text = "加入者"
                                    End Sub)
-                           Dim status As Integer = 1
-                           status = LaunchLink(False, JoinedLobbyId.Remove(JoinedLobbyId.Length - 2), JoinedLobbyId.Substring(JoinedLobbyId.Length - 2))
+                           Dim processedId As String = JoinedLobbyId.FromB32ToB10()
+                           RemotePort = JoinedLobbyId.Substring(10)
+                           LaunchLink(False, JoinedLobbyId.Substring(0, 8), JoinedLobbyId.Substring(8, 2), remotePort:=RemotePort)
                            Dim retryCount As Integer = 0
                            While Not IsETRunning
                                Thread.Sleep(300)
@@ -577,10 +542,10 @@ Retry:
                            Thread.Sleep(1000)
                            StartETWatcher()
                            Thread.Sleep(500)
-                           While Not IsWatcherStarted OrElse RemotePort Is Nothing
+                           While Not IsWatcherStarted OrElse JoinerLocalPort = Nothing
                                Thread.Sleep(500)
                            End While
-                           If status = 0 Then McPortForward("10.114.51.41", RemotePort, "§ePCL CE 大厅 - " & Hostname)
+                           McPortForward("10.114.51.41", JoinerLocalPort, "§ePCL CE 大厅 - " & Hostname)
                            RunInUi(Sub()
                                        BtnFinishExit.Text = $"退出 {Hostname} 的大厅"
                                    End Sub)

@@ -20,6 +20,7 @@
         TextLinkRelay.Text = Setup.Get("LinkRelayServer")
         ComboRelayType.SelectedIndex = Setup.Get("LinkRelayType")
         ComboServerType.SelectedIndex = Setup.Get("LinkServerType")
+        ComboProxyType.SelectedIndex = Setup.Get("LinkProxyType")
         If String.IsNullOrWhiteSpace(Setup.Get("LinkNaidRefreshToken")) Then
             CardLogged.Visibility = Visibility.Collapsed
             CardNotLogged.Visibility = Visibility.Visible
@@ -123,9 +124,12 @@
         Try
             Setup.Reset("LinkRelayServer")
             Setup.Reset("LinkRelayType")
+            Setup.Reset("LinkServerType")
+            Setup.Reset("LinkProxyType")
 
             Log("[Setup] 已初始化联机页设置")
             Hint("已初始化联机页设置！", HintType.Finish, False)
+            Reload()
         Catch ex As Exception
             Log(ex, "初始化联机页设置失败", LogLevel.Msgbox)
         End Try
@@ -137,7 +141,7 @@
     Private Shared Sub TextBoxChange(sender As MyTextBox, e As Object) Handles TextLinkRelay.ValidatedTextChanged
         If AniControlEnabled = 0 Then Setup.Set(sender.Tag, sender.Text)
     End Sub
-    Private Shared Sub ComboBoxChange(sender As MyComboBox, e As Object) Handles ComboRelayType.SelectionChanged
+    Private Shared Sub ComboBoxChange(sender As MyComboBox, e As Object) Handles ComboRelayType.SelectionChanged, ComboServerType.SelectionChanged, ComboProxyType.SelectionChanged
         If AniControlEnabled = 0 Then Setup.Set(sender.Tag, sender.SelectedIndex)
     End Sub
 
