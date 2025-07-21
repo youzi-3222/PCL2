@@ -1,4 +1,4 @@
-Public Class PageVersionCompResource
+Public Class PageInstanceCompResource
     Implements IRefreshable
 #Region "初始化"
 
@@ -31,7 +31,7 @@ Public Class PageVersionCompResource
 
     Private Function GetRequireLoaderData() As CompLocalLoaderData
         Dim res As New CompLocalLoaderData
-        res.GameVersion = PageVersionLeft.Version
+        res.GameVersion = PageInstanceLeft.Instance
         res.Frm = Me
         Dim RequireLoaders As New List(Of CompLoaderType)
         Select Case CurrentCompType
@@ -45,7 +45,7 @@ Public Class PageVersionCompResource
                 RequireLoaders = {CompLoaderType.Minecraft}.ToList()
         End Select
         res.Loaders = RequireLoaders
-        res.CompPath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+        res.CompPath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
         res.CompType = CurrentCompType
         Return res
     End Function
@@ -111,17 +111,17 @@ Public Class PageVersionCompResource
         End Try
         Select Case WhichPage
             Case CompType.Mod
-                If FrmVersionMod IsNot Nothing Then FrmVersionMod.ReloadCompFileList(True) '无需 Else，还没加载刷个鬼的新
-                FrmVersionLeft.ItemMod.Checked = True
+                If FrmInstanceMod IsNot Nothing Then FrmInstanceMod.ReloadCompFileList(True) '无需 Else，还没加载刷个鬼的新
+                FrmInstanceLeft.ItemMod.Checked = True
             Case CompType.ResourcePack
-                If FrmVersionResourcePack IsNot Nothing Then FrmVersionResourcePack.ReloadCompFileList(True)
-                FrmVersionLeft.ItemResourcePack.Checked = True
+                If FrmInstanceResourcePack IsNot Nothing Then FrmInstanceResourcePack.ReloadCompFileList(True)
+                FrmInstanceLeft.ItemResourcePack.Checked = True
             Case CompType.Shader
-                If FrmVersionShader IsNot Nothing Then FrmVersionShader.ReloadCompFileList(True)
-                FrmVersionLeft.ItemShader.Checked = True
+                If FrmInstanceShader IsNot Nothing Then FrmInstanceShader.ReloadCompFileList(True)
+                FrmInstanceLeft.ItemShader.Checked = True
             Case CompType.Schematic
-                If FrmVersionSchematic IsNot Nothing Then FrmVersionSchematic.ReloadCompFileList(True)
-                FrmVersionLeft.ItemSchematic.Checked = True
+                If FrmInstanceSchematic IsNot Nothing Then FrmInstanceSchematic.ReloadCompFileList(True)
+                FrmInstanceLeft.ItemSchematic.Checked = True
         End Select
         Hint("正在刷新……", Log:=False)
     End Sub
@@ -138,7 +138,7 @@ Public Class PageVersionCompResource
         Dim LoadPath As String
         If String.IsNullOrEmpty(CurrentFolderPath) Then
             '加载根目录
-            LoadPath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            LoadPath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
         Else
             '加载当前文件夹
             LoadPath = CurrentFolderPath
@@ -198,7 +198,7 @@ Public Class PageVersionCompResource
         
         Try
             '获取根路径
-            Dim rootPath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Dim rootPath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
             rootPath = System.IO.Path.GetFullPath(rootPath.TrimEnd("\"))
             
             '获取父级路径
@@ -222,7 +222,7 @@ Public Class PageVersionCompResource
         Dim LoadPath As String
         If String.IsNullOrEmpty(CurrentFolderPath) Then
             '返回到根目录
-            LoadPath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            LoadPath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
         Else
             '加载当前文件夹
             LoadPath = CurrentFolderPath
@@ -261,7 +261,7 @@ Public Class PageVersionCompResource
             Else
                 '检查是否为投影文件类型且schematics文件夹不存在
                 If CurrentCompType = CompType.Schematic Then
-                    Dim schematicsPath As String = PageVersionLeft.Version.PathIndie & "schematics\"
+                    Dim schematicsPath As String = PageInstanceLeft.Instance.PathIndie & "schematics\"
                     If Not Directory.Exists(schematicsPath) Then
                         PanSchematicEmpty.Visibility = Visibility.Visible
                         PanEmpty.Visibility = Visibility.Collapsed
@@ -301,7 +301,7 @@ Public Class PageVersionCompResource
             End If
             '修改缓存
             ModItems.Clear()
-            Dim rootPath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Dim rootPath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
             rootPath = System.IO.Path.GetFullPath(rootPath.TrimEnd("\"))
 
             Dim itemsToShow = CompResourceListLoader.Output.Where(Function(item)
@@ -583,7 +583,7 @@ Public Class PageVersionCompResource
 
     Private Sub BtnManageOpen_Click(sender As Object, e As EventArgs) Handles BtnManageOpen.Click, BtnHintOpen.Click
         Try
-            Dim CompFilePath = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Dim CompFilePath = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
             Directory.CreateDirectory(CompFilePath)
             OpenExplorer(CompFilePath)
         Catch ex As Exception
@@ -628,19 +628,19 @@ Public Class PageVersionCompResource
             Hint("请先将文件从回收站还原，再尝试安装！", HintType.Critical)
             Return True
         End If
-        '获取并检查目标版本
-        Dim TargetVersion As McVersion = McVersionCurrent
-        If FrmMain.PageCurrent = FormMain.PageType.VersionSetup Then TargetVersion = PageVersionLeft.Version
-        If FrmMain.PageCurrent = FormMain.PageType.VersionSelect OrElse TargetVersion Is Nothing OrElse Not TargetVersion.Modable Then
-            '正在选择版本，或当前版本不能安装 Mod
-            Hint("若要安装 Mod，请先选择一个可以安装 Mod 的版本！")
-        ElseIf Not (FrmMain.PageCurrent = FormMain.PageType.VersionSetup AndAlso FrmMain.PageCurrentSub = FormMain.PageSubType.VersionMod) Then
+        '获取并检查目标实例
+        Dim targetInstance As McInstance = McInstanceCurrent
+        If FrmMain.PageCurrent = FormMain.PageType.InstanceSetup Then targetInstance = PageInstanceLeft.Instance
+        If FrmMain.PageCurrent = FormMain.PageType.InstanceSelect OrElse targetInstance Is Nothing OrElse Not targetInstance.Modable Then
+            '正在选择实例，或当前实例不能安装 Mod
+            Hint("若要安装 Mod，请先选择一个可以安装 Mod 的实例！")
+        ElseIf Not (FrmMain.PageCurrent = FormMain.PageType.InstanceSetup AndAlso FrmMain.PageCurrentSub = FormMain.PageSubType.VersionMod) Then
             '未处于 Mod 管理页面
-            If MyMsgBox($"是否要将这{If(FilePathList.Count = 1, "个", "些")}文件作为 Mod 安装到 {TargetVersion.Name}？", "Mod 安装确认", "确定", "取消") = 1 Then GoTo Install
+            If MyMsgBox($"是否要将这{If(FilePathList.Count = 1, "个", "些")}文件作为 Mod 安装到 {targetInstance.Name}？", "Mod 安装确认", "确定", "取消") = 1 Then GoTo Install
         Else
             '处于 Mod 管理页面
 Install:
-            Dim ModFolder = TargetVersion.PathIndie & If(TargetVersion.Version.HasLabyMod, "labymod-neo\fabric\" & TargetVersion.Version.McName & "\", "") & "mods\"
+            Dim ModFolder = targetInstance.PathIndie & If(targetInstance.Version.HasLabyMod, "labymod-neo\fabric\" & targetInstance.Version.McName & "\", "") & "mods\"
             Try
                 For Each ModFile In FilePathList
                     Dim NewFileName = GetFileNameFromPath(ModFile).Replace(".disabled", "").Replace(".old", "")
@@ -653,8 +653,8 @@ Install:
                     Hint($"已安装 {FilePathList.Count} 个 Mod！", HintType.Finish)
                 End If
                 '刷新列表
-                If FrmMain.PageCurrent = FormMain.PageType.VersionSetup AndAlso FrmMain.PageCurrentSub = FormMain.PageSubType.VersionMod Then
-                    LoaderFolderRun(CompResourceListLoader, ModFolder, LoaderFolderRunType.ForceRun, LoaderInput:=FrmVersionMod?.GetRequireLoaderData())
+                If FrmMain.PageCurrent = FormMain.PageType.InstanceSetup AndAlso FrmMain.PageCurrentSub = FormMain.PageSubType.VersionMod Then
+                    LoaderFolderRun(CompResourceListLoader, ModFolder, LoaderFolderRunType.ForceRun, LoaderInput:=FrmInstanceMod?.GetRequireLoaderData())
                 End If
             Catch ex As Exception
                 Log(ex, "复制 Mod 文件失败", LogLevel.Msgbox)
@@ -679,18 +679,18 @@ Install:
             Hint("请先将文件从回收站还原，再尝试安装！", HintType.Critical)
             Exit Sub
         End If
-        
-        '获取并检查目标版本
-        Dim TargetVersion As McVersion = McVersionCurrent
-        If FrmMain.PageCurrent = FormMain.PageType.VersionSetup Then TargetVersion = PageVersionLeft.Version
-        
+
+        '获取并检查目标实例
+        Dim targetInstance As McInstance = McInstanceCurrent
+        If FrmMain.PageCurrent = FormMain.PageType.InstanceSetup Then targetInstance = PageInstanceLeft.Instance
+
         '根据组件类型设置相关参数
         Select Case CompType
             Case CompType.Mod
                 ValidExtensions = {"jar", "litemod", "disabled", "old"}
                 CompTypeName = "Mod"
                 If String.IsNullOrEmpty(TargetFolderPath) Then
-                    CompFolder = TargetVersion.PathIndie & If(TargetVersion.Version.HasLabyMod, "labymod-neo\fabric\" & TargetVersion.Version.McName & "\", "") & "mods\"
+                    CompFolder = targetInstance.PathIndie & If(targetInstance.Version.HasLabyMod, "labymod-neo\fabric\" & targetInstance.Version.McName & "\", "") & "mods\"
                 Else
                     CompFolder = TargetFolderPath & "\"
                 End If
@@ -698,7 +698,7 @@ Install:
                 ValidExtensions = {"zip"}
                 CompTypeName = "资源包"
                 If String.IsNullOrEmpty(TargetFolderPath) Then
-                    CompFolder = TargetVersion.PathIndie & "resourcepacks\"
+                    CompFolder = targetInstance.PathIndie & "resourcepacks\"
                 Else
                     CompFolder = TargetFolderPath & "\"
                 End If
@@ -706,7 +706,7 @@ Install:
                 ValidExtensions = {"zip"}
                 CompTypeName = "光影包"
                 If String.IsNullOrEmpty(TargetFolderPath) Then
-                    CompFolder = TargetVersion.PathIndie & "shaderpacks\"
+                    CompFolder = targetInstance.PathIndie & "shaderpacks\"
                 Else
                     CompFolder = TargetFolderPath & "\"
                 End If
@@ -714,7 +714,7 @@ Install:
                 ValidExtensions = {"litematic", "nbt", "schematic", "schem"}
                 CompTypeName = "投影原理图"
                 If String.IsNullOrEmpty(TargetFolderPath) Then
-                    CompFolder = TargetVersion.PathIndie & "schematics\"
+                    CompFolder = targetInstance.PathIndie & "schematics\"
                 Else
                     CompFolder = TargetFolderPath & "\"
                 End If
@@ -727,13 +727,13 @@ Install:
         End If
         
         Log($"[System] 文件为 {Extension} 格式，尝试作为{CompTypeName}安装")
-        
-        '检查版本兼容性
-        If CompType = CompType.Mod AndAlso (FrmMain.PageCurrent = FormMain.PageType.VersionSelect OrElse TargetVersion Is Nothing OrElse Not TargetVersion.Modable) Then
-            Hint("若要安装 Mod，请先选择一个可以安装 Mod 的版本！")
+
+        '检查实例兼容性
+        If CompType = CompType.Mod AndAlso (FrmMain.PageCurrent = FormMain.PageType.InstanceSelect OrElse targetInstance Is Nothing OrElse Not targetInstance.Modable) Then
+            Hint("若要安装 Mod，请先选择一个可以安装 Mod 的实例！")
             Exit Sub
         End If
-        
+
         '确认安装
         Dim CurrentPage As FormMain.PageSubType = FormMain.PageSubType.VersionMod
         Select Case CompType
@@ -742,11 +742,11 @@ Install:
             Case CompType.Shader : CurrentPage = FormMain.PageSubType.VersionShader
             Case CompType.Schematic : CurrentPage = FormMain.PageSubType.VersionSchematic
         End Select
-        
-        If Not (FrmMain.PageCurrent = FormMain.PageType.VersionSetup AndAlso FrmMain.PageCurrentSub = CurrentPage) Then
-            If MyMsgBox($"是否要将这{If(FilePathList.Count = 1, "个", "些")}文件作为{CompTypeName}安装到 {TargetVersion.Name}？", $"{CompTypeName}安装确认", "确定", "取消") <> 1 Then Exit Sub
+
+        If Not (FrmMain.PageCurrent = FormMain.PageType.InstanceSetup AndAlso FrmMain.PageCurrentSub = CurrentPage) Then
+            If MyMsgBox($"是否要将这{If(FilePathList.Count = 1, "个", "些")}文件作为{CompTypeName}安装到 {targetInstance.Name}？", $"{CompTypeName}安装确认", "确定", "取消") <> 1 Then Exit Sub
         End If
-        
+
         '执行安装
         Try
             Directory.CreateDirectory(CompFolder)
@@ -770,13 +770,13 @@ Install:
             Else
                 Hint($"已安装 {FilePathList.Count} 个{CompTypeName}！", HintType.Finish)
             End If
-            
+
             '刷新列表
-            If FrmMain.PageCurrent = FormMain.PageType.VersionSetup AndAlso FrmMain.PageCurrentSub = CurrentPage Then
+            If FrmMain.PageCurrent = FormMain.PageType.InstanceSetup AndAlso FrmMain.PageCurrentSub = CurrentPage Then
                 Select Case CompType
                     Case CompType.Mod
-                        If FrmVersionMod IsNot Nothing Then
-                            LoaderFolderRun(CompResourceListLoader, CompFolder, LoaderFolderRunType.ForceRun, LoaderInput:=FrmVersionMod?.GetRequireLoaderData())
+                        If FrmInstanceMod IsNot Nothing Then
+                            LoaderFolderRun(CompResourceListLoader, CompFolder, LoaderFolderRunType.ForceRun, LoaderInput:=FrmInstanceMod?.GetRequireLoaderData())
                         End If
                     Case CompType.ResourcePack, CompType.Shader, CompType.Schematic
                         Dim CurrentForm = GetCurrentCompResourceForm()
@@ -785,7 +785,7 @@ Install:
                         End If
                 End Select
             End If
-            
+
         Catch ex As Exception
             Log(ex, $"复制{CompTypeName}文件失败", LogLevel.Msgbox)
         End Try
@@ -794,12 +794,12 @@ Install:
     ''' <summary>
     ''' 获取当前的组件资源管理窗体。
     ''' </summary>
-    Private Shared Function GetCurrentCompResourceForm() As PageVersionCompResource
+    Private Shared Function GetCurrentCompResourceForm() As PageInstanceCompResource
         Select Case FrmMain.PageCurrentSub
-            Case FormMain.PageSubType.VersionMod : Return FrmVersionMod
-            Case FormMain.PageSubType.VersionResourcePack : Return FrmVersionResourcePack
-            Case FormMain.PageSubType.VersionShader : Return FrmVersionShader
-            Case FormMain.PageSubType.VersionSchematic : Return FrmVersionSchematic
+            Case FormMain.PageSubType.VersionMod : Return FrmInstanceMod
+            Case FormMain.PageSubType.VersionResourcePack : Return FrmInstanceResourcePack
+            Case FormMain.PageSubType.VersionShader : Return FrmInstanceShader
+            Case FormMain.PageSubType.VersionSchematic : Return FrmInstanceSchematic
             Case Else : Return Nothing
         End Select
     End Function
@@ -827,7 +827,7 @@ Install:
                 For Each ModEntity In CompResourceListLoader.Output
                     ExportContent.Add(ModEntity.FileName)
                 Next
-                ExportText(Join(ExportContent, vbCrLf), PageVersionLeft.Version.Name & "已安装的资源信息.txt")
+                ExportText(Join(ExportContent, vbCrLf), PageInstanceLeft.Instance.Name & "已安装的资源信息.txt")
 
             Case 2 'CSV
                 Dim ExportContent As New List(Of String)
@@ -835,7 +835,7 @@ Install:
                 For Each ModEntity In CompResourceListLoader.Output
                     ExportContent.Add($"{ModEntity.FileName},{ModEntity.Comp?.TranslatedName},{ModEntity.Version},{ModEntity.CompFile?.ReleaseDate},{ModEntity.ModId},{ModEntity.Comp?.Id},{New FileInfo(ModEntity.Path).Length},{ModEntity.Path}")
                 Next
-                ExportText(Join(ExportContent, vbCrLf), PageVersionLeft.Version.Name & "已安装的资源信息.csv")
+                ExportText(Join(ExportContent, vbCrLf), PageInstanceLeft.Instance.Name & "已安装的资源信息.csv")
 
         End Select
     End Sub
@@ -844,7 +844,7 @@ Install:
     ''' 下载 Mod。
     ''' </summary>
     Private Sub BtnManageDownload_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnManageDownload.Click, BtnHintDownload.Click
-        PageComp.TargetVersion = PageVersionLeft.Version '将当前版本设置为筛选器
+        PageComp.TargetVersion = PageInstanceLeft.Instance '将当前实例设置为筛选器
         Select Case CurrentCompType
             Case CompType.Mod : FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadMod)
             Case CompType.ResourcePack : FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadResourcePack)
@@ -856,15 +856,15 @@ Install:
     ''' 下载投影Mod按钮点击事件。
     ''' </summary>
     Private Sub BtnSchematicDownloadMod_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSchematicDownloadMod.Click
-        PageComp.TargetVersion = PageVersionLeft.Version '将当前版本设置为筛选器
+        PageComp.TargetVersion = PageInstanceLeft.Instance '将当前实例设置为筛选器
         FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadMod)
     End Sub
 
     ''' <summary>
-    ''' 版本选择按钮点击事件。
+    ''' 实例选择按钮点击事件。
     ''' </summary>
     Private Sub BtnSchematicVersionSelect_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSchematicVersionSelect.Click
-        FrmMain.PageChange(FormMain.PageType.VersionSelect)
+        FrmMain.PageChange(FormMain.PageType.InstanceSelect)
     End Sub
 
 #End Region
@@ -1293,8 +1293,8 @@ Install:
                 End Try
             End Sub))
             '结束处理
-            Dim Loader As New LoaderCombo(Of IEnumerable(Of LocalCompFile))("资源更新：" & PageVersionLeft.Version.Name, InstallLoaders)
-            Dim PathMods As String = PageVersionLeft.Version.PathIndie & If(PageVersionLeft.Version.Version.HasLabyMod, "labymod-neo\fabric\" & PageVersionLeft.Version.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
+            Dim Loader As New LoaderCombo(Of IEnumerable(Of LocalCompFile))("资源更新：" & PageInstanceLeft.Instance.Name, InstallLoaders)
+            Dim PathMods As String = PageInstanceLeft.Instance.PathIndie & If(PageInstanceLeft.Instance.Version.HasLabyMod, "labymod-neo\fabric\" & PageInstanceLeft.Instance.Version.McName & "\", "") & GetPathNameByCompType(CurrentCompType) & "\"
             Loader.OnStateChanged =
             Sub()
                 '结果提示
@@ -1461,7 +1461,7 @@ Install:
 
             Dim ModEntry As LocalCompFile = CType(If(TypeOf sender Is MyIconButton, sender.Tag, sender), MyLocalCompItem).Entry
             '判断该 LabyMod 是否支持安装 Fabric Mod
-            Dim ModdedLabyMod = PageVersionLeft.Version.Version.HasLabyMod AndAlso PageVersionLeft.Version.Modable
+            Dim ModdedLabyMod = PageInstanceLeft.Instance.Version.HasLabyMod AndAlso PageInstanceLeft.Instance.Modable
             '加载失败信息
             If ModEntry.State = LocalCompFile.LocalFileStatus.Unavailable Then
                 MyMsgBox("无法读取此资源的信息。" & vbCrLf & vbCrLf & "详细的错误信息：" & GetExceptionDetail(ModEntry.FileUnavailableReason), "资源读取失败")
@@ -1470,10 +1470,10 @@ Install:
             If ModEntry.Comp IsNot Nothing Then
                 '跳转到 Mod 下载页面
                 FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.CompDetail,
-                    .Additional = {ModEntry.Comp, New List(Of String), PageVersionLeft.Version.Version.McName,
-                        If(PageVersionLeft.Version.Version.HasForge, CompLoaderType.Forge,
-                        If(PageVersionLeft.Version.Version.HasNeoForge, CompLoaderType.NeoForge,
-                        If(PageVersionLeft.Version.Version.HasFabric OrElse ModdedLabyMod, CompLoaderType.Fabric, CompLoaderType.Any))), CurrentCompType}})
+                    .Additional = {ModEntry.Comp, New List(Of String), PageInstanceLeft.Instance.Version.McName,
+                        If(PageInstanceLeft.Instance.Version.HasForge, CompLoaderType.Forge,
+                        If(PageInstanceLeft.Instance.Version.HasNeoForge, CompLoaderType.NeoForge,
+                        If(PageInstanceLeft.Instance.Version.HasFabric OrElse ModdedLabyMod, CompLoaderType.Fabric, CompLoaderType.Any))), CurrentCompType}})
             Else
                 '对于原理图文件，使用异步加载避免UI卡顿
                 If ModEntry.Path.EndsWithF(".litematic", True) OrElse ModEntry.Path.EndsWithF(".schem", True) OrElse ModEntry.Path.EndsWithF(".schematic", True) OrElse ModEntry.Path.EndsWithF(".nbt", True) Then
@@ -1750,7 +1750,7 @@ Install:
         End If
         
         If ModEntry.SpongeVersion.HasValue Then
-            ContentLines.Add("Sponge版本：" & ModEntry.SpongeVersion.Value)
+            ContentLines.Add("Sponge 版本：" & ModEntry.SpongeVersion.Value)
         End If
         
         If ModEntry.StructureDataVersion.HasValue Then

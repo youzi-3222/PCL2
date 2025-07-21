@@ -1,6 +1,6 @@
 Imports System.Text.RegularExpressions
 
-Public Class PageVersionInstall
+Public Class PageInstanceInstall
 
     Private Sub LoaderInit() Handles Me.Initialized
         DisabledPageAnimControls.Add(BtnSelectStart)
@@ -150,7 +150,7 @@ Public Class PageVersionInstall
                 BtnLabyModClearInner.SetBinding(Shapes.Path.FillProperty, New Binding("Foreground") With {.Source = CardLabyMod.MainTextBlock, .Mode = BindingMode.OneWay})
                 BtnOptiFabricClearInner.SetBinding(Shapes.Path.FillProperty, New Binding("Foreground") With {.Source = CardOptiFabric.MainTextBlock, .Mode = BindingMode.OneWay})
             End Sub,, True)
-        }, "FrmVersionInstall SelectPageSwitch", True)
+        }, "FrmInstanceInstall SelectPageSwitch", True)
     End Sub
     Public Sub ExitSelectPage()
         If Not IsInSelectPage Then Exit Sub
@@ -176,7 +176,7 @@ Public Class PageVersionInstall
                        PanSelect.Visibility = Visibility.Collapsed
                        PanBack.IsHitTestVisible = True
                    End Sub,, True)
-        }, "FrmVersionInstall SelectPageSwitch")
+        }, "FrmInstanceInstall SelectPageSwitch")
     End Sub
 
     '页面切换触发
@@ -490,7 +490,7 @@ Public Class PageVersionInstall
         IsReloading = True
         Dim SelectedInfo As String = GetSelectInfo()
         '主预览
-        ItemSelect.Title = PageVersionLeft.Version.Name
+        ItemSelect.Title = PageInstanceLeft.Instance.Name
         ItemSelect.Logo = GetSelectLogo()
         BtnSelectStart.IsEnabled = True
         If SelectedInfo = CurrentInfo Then
@@ -854,7 +854,7 @@ Public Class PageVersionInstall
 
     '显示信息获取
     ''' <summary>
-    ''' 获取版本描述信息。
+    ''' 获取实例描述信息。
     ''' </summary>
     Private Function GetSelectInfo() As String
         Dim Info As String = ""
@@ -893,7 +893,7 @@ Public Class PageVersionInstall
         Return Info.TrimStart(", ".ToCharArray())
     End Function
     ''' <summary>
-    ''' 获取版本图标。
+    ''' 获取实例图标。
     ''' </summary>
     Private Function GetSelectLogo() As String
         If SelectedFabric IsNot Nothing Then
@@ -919,14 +919,14 @@ Public Class PageVersionInstall
         End If
     End Function
 
-    '版本名处理
+    '实例名处理
     Private IsSelectNameEdited As Boolean = False
     Private IsSelectNameChanging As Boolean = False
-    
+
     Private Shared ReadOnly RegexIsJarFile As New Regex("\.jar(\.disabled)?$")
-    
+
     ''' <summary>
-    ''' 通过文件名关键字和 mod id 比如 <c>fabric</c> <c>api</c> 和 <c>fabric-api</c> 来获取给定版本 mods 目录中某个 mod 的 <see cref="LocalCompFile"/> 对象
+    ''' 通过文件名关键字和 mod id 比如 <c>fabric</c> <c>api</c> 和 <c>fabric-api</c> 来获取给定实例 mods 目录中某个 mod 的 <see cref="LocalCompFile"/> 对象
     ''' <br />
     ''' <b>为了不浪费性能，关键字统一用小写</b> 
     ''' </summary>
@@ -935,12 +935,12 @@ Public Class PageVersionInstall
     ''' </returns>
     Private Shared Function GetModLocalCompByKeywords(modId As String, mainKeyword As String, ParamArray keywords As String()) As LocalCompFile
         If modId Is Nothing Then Return Nothing
-        Return GetModLocalCompByKeywords({ modId }, mainKeyword, keywords)
+        Return GetModLocalCompByKeywords({modId}, mainKeyword, keywords)
     End Function
-    
+
     Private Shared Function GetModLocalCompByKeywords(modIds As String(), mainKeyword As String, ParamArray keywords As String()) As LocalCompFile
-        Dim version = PageVersionLeft.Version
-        If Not version.Modable Then Return Nothing '跳过不可安装 mod 版本
+        Dim version = PageInstanceLeft.Instance
+        If Not version.Modable Then Return Nothing '跳过不可安装 Mod 实例
         Dim modFolder = $"{version.Path}mods"
         If Not Directory.Exists(modFolder) Then Return Nothing '确保 mods 目录存在
         For Each file In Directory.EnumerateFiles(modFolder, $"*{mainKeyword}*")
@@ -953,13 +953,13 @@ Public Class PageVersionInstall
         Next
         Return Nothing
     End Function
-    
+
     Private _currentFabricApi As CompFile = Nothing '加载完成后直接调用以提高性能
     Private _currentFabricApiPath As String = Nothing
     Private Function GetCurrentFabricApi() '进入页面和联网加载时调用
         Dim loaderOutput = DlFabricApiLoader.Output
         If loaderOutput Is Nothing Then Return Nothing '确保联网信息已加载
-        Dim localComp = GetModLocalCompByKeywords({ "fabric-api", "fabric" }, "fabric", "api")
+        Dim localComp = GetModLocalCompByKeywords({"fabric-api", "fabric"}, "fabric", "api")
         If localComp Is Nothing Then Return Nothing
         Dim result = loaderOutput.FirstOrDefault(Function(comp) comp.Hash = localComp.ModrinthHash)
         If result IsNot Nothing Then
@@ -987,7 +987,7 @@ Public Class PageVersionInstall
     Private _currentQsl As CompFile = Nothing
     Private _currentQslPath As String = Nothing
     Private Function GetCurrentQsl()
-        Dim loaderOutput = DlQslLoader.Output
+        Dim loaderOutput = DlQSLLoader.Output
         If loaderOutput Is Nothing Then Return Nothing
         Dim localComp = GetModLocalCompByKeywords("quilted_fabric_api", "qsl", "qf", "fabric", "api")
         '兼容测试版的文件名 没错这玩意测试版命名方式甚至与正式版不一样
@@ -1001,46 +1001,61 @@ Public Class PageVersionInstall
         Return result
     End Function
 
+    Private _currentOptiFabric As CompFile = Nothing
+    Private _currentOptiFabricPath As String = Nothing
+    Private Function GetCurrentOptiFabric()
+        Dim loaderOutput = DlOptiFabricLoader.Output
+        If loaderOutput Is Nothing Then Return Nothing
+        Dim localComp = GetModLocalCompByKeywords("optifabric", "optifabric", "opti")
+        If localComp Is Nothing Then Return Nothing
+        Dim result = loaderOutput.FirstOrDefault(Function(comp) comp.Hash = localComp.ModrinthHash)
+        If result IsNot Nothing Then
+            _currentOptiFabric = result
+            _currentOptiFabricPath = localComp.Path
+        End If
+        Return result
+    End Function
+
     '当前信息获取
     Public Sub GetCurrentInfo()
         SelectClear()
         BtnSelectStart.IsEnabled = True
-        Dim CurrentVersion = PageVersionLeft.Version.Version
-        SelectedMinecraftId = CurrentVersion.McName
-        If CurrentVersion.HasLiteLoader Then
-            SelectedLiteLoader = New DlLiteLoaderListEntry With {.Inherit = CurrentVersion.McName}
+        Dim CurrentInstance = PageInstanceLeft.Instance.Version
+        SelectedMinecraftId = CurrentInstance.McName
+        If CurrentInstance.HasLiteLoader Then
+            SelectedLiteLoader = New DlLiteLoaderListEntry With {.Inherit = CurrentInstance.McName}
         End If
-        If CurrentVersion.HasOptiFine Then
-            SelectedOptiFine = New DlOptiFineListEntry With {.NameDisplay = CurrentVersion.McName + " " + CurrentVersion.OptiFineVersion, .IsPreview = CurrentVersion.OptiFineVersion.ContainsF("pre"), .Inherit = CurrentVersion.McName, .NameVersion = CurrentVersion.McName & "-OptiFine_HD_U_" & CurrentVersion.OptiFineVersion}
+        If CurrentInstance.HasOptiFine Then
+            SelectedOptiFine = New DlOptiFineListEntry With {.NameDisplay = CurrentInstance.McName + " " + CurrentInstance.OptiFineVersion, .IsPreview = CurrentInstance.OptiFineVersion.ContainsF("pre"), .Inherit = CurrentInstance.McName, .NameVersion = CurrentInstance.McName & "-OptiFine_HD_U_" & CurrentInstance.OptiFineVersion}
         End If
-        If CurrentVersion.HasCleanroom Then
+        If CurrentInstance.HasCleanroom Then
             SelectedAPIName = "Cleanroom"
-            SelectedCleanroomVersion = CurrentVersion.CleanroomVersion
-        ElseIf CurrentVersion.HasForge Then
+            SelectedCleanroomVersion = CurrentInstance.CleanroomVersion
+        ElseIf CurrentInstance.HasForge Then
             SelectedLoaderName = "Forge"
-            SelectedForge = New DlForgeVersionEntry(CurrentVersion.ForgeVersion, Nothing, CurrentVersion.McName) With {.Category = "installer", .ForgeType = DlForgelikeEntry.ForgelikeType.Forge, .Inherit = CurrentVersion.McName}
-        ElseIf CurrentVersion.HasLegacyFabric Then
+            SelectedForge = New DlForgeVersionEntry(CurrentInstance.ForgeVersion, Nothing, CurrentInstance.McName) With {.Category = "installer", .ForgeType = DlForgelikeEntry.ForgelikeType.Forge, .Inherit = CurrentInstance.McName}
+        ElseIf CurrentInstance.HasLegacyFabric Then
             SelectedLoaderName = "LegacyFabric"
-            SelectedLegacyFabric = CurrentVersion.LegacyFabricVersion
+            SelectedLegacyFabric = CurrentInstance.LegacyFabricVersion
             SelectedLegacyFabricApi = GetCurrentLegacyFabricApi()
-        ElseIf CurrentVersion.HasFabric Then
+        ElseIf CurrentInstance.HasFabric Then
             SelectedLoaderName = "Fabric"
-            SelectedFabric = CurrentVersion.FabricVersion
-            SelectedFabricApi = GetCurrentFabricApi() '检测已有 Fabric API
-        ElseIf CurrentVersion.HasLabyMod Then
+            SelectedFabric = CurrentInstance.FabricVersion
+            SelectedFabricApi = GetCurrentFabricApi()
+        ElseIf CurrentInstance.HasLabyMod Then
             SelectedLoaderName = "LabyMod"
-            SelectedLabyModVersion = CurrentVersion.LabyModVersion
-        ElseIf CurrentVersion.HasNeoForge Then
+            SelectedLabyModVersion = CurrentInstance.LabyModVersion
+        ElseIf CurrentInstance.HasNeoForge Then
             SelectedLoaderName = "NeoForge"
-            SelectedNeoForgeVersion = CurrentVersion.NeoForgeVersion
-        ElseIf CurrentVersion.HasQuilt Then
+            SelectedNeoForgeVersion = CurrentInstance.NeoForgeVersion
+        ElseIf CurrentInstance.HasQuilt Then
             SelectedLoaderName = "Quilt"
-            SelectedQuilt = CurrentVersion.QuiltVersion
-            SelectedQSL = GetCurrentQsl() '检测已有 QSL
-            SelectedFabricApi = GetCurrentFabricApi() '检测已有 Fabric API
+            SelectedQuilt = CurrentInstance.QuiltVersion
+            SelectedQSL = GetCurrentQsl()
+            SelectedFabricApi = GetCurrentFabricApi()
         End If
-        If (CurrentVersion.HasFabric OrElse CurrentVersion.HasQuilt) AndAlso CurrentVersion.HasOptiFine Then
-            SelectedOptiFabric = Nothing 'TODO: 检测已有 OptiFabric
+        If (CurrentInstance.HasFabric OrElse CurrentInstance.HasQuilt) AndAlso CurrentInstance.HasOptiFine Then
+            SelectedOptiFabric = GetCurrentOptiFabric()
         End If
         SelectedMinecraftIcon = "pack://application:,,,/images/Blocks/Grass.png" 'TODO: 需要判断 Icon
         CurrentInfo = GetSelectInfo()
@@ -1125,7 +1140,7 @@ Public Class PageVersionInstall
             Dim PanInfo As New StackPanel With {.Margin = New Thickness(20, MyCard.SwapedHeight, 18, 0), .VerticalAlignment = VerticalAlignment.Top, .RenderTransform = New TranslateTransform(0, 0), .Tag = TopestVersions}
             Dim StackInstall = Sub(Stack As StackPanel)
                                    For Each item In Stack.Tag
-                                       Stack.Children.Add(McDownloadListItem(item, Sub(sender, e) FrmVersionInstall.MinecraftSelected(sender, e), False))
+                                       Stack.Children.Add(McDownloadListItem(item, Sub(sender, e) FrmInstanceInstall.MinecraftSelected(sender, e), False))
                                    Next
                                End Sub
             MyCard.StackInstall(PanInfo, StackInstall)
@@ -1586,7 +1601,7 @@ Public Class PageVersionInstall
             CardFabric.SwapControl = PanFabric
             CardFabric.InstallMethod = Sub(Stack As StackPanel)
                                            For Each item In Stack.Tag
-                                               Stack.Children.Add(FabricDownloadListItem(CType(item, JObject), AddressOf FrmVersionInstall.Fabric_Selected))
+                                               Stack.Children.Add(FabricDownloadListItem(CType(item, JObject), AddressOf FrmInstanceInstall.Fabric_Selected))
                                            Next
                                        End Sub
         Catch ex As Exception
@@ -1714,7 +1729,7 @@ Public Class PageVersionInstall
                 SelectedFabricApi = currentInstalled
                 SelectedAPIName = "Fabric API"
                 SelectReload()
-            '自动选择 Fabric API
+                '自动选择 Fabric API
             ElseIf (Not AutoSelectedFabricApi AndAlso SelectedQuilt Is Nothing) OrElse (SelectedQuilt IsNot Nothing AndAlso LoadQSLGetError() Is "没有可用版本") Then
                 AutoSelectedFabricApi = True
                 Log($"[Download] 已自动选择 Fabric API：{CType(PanFabricApi.Children(0), MyListItem).Title}")
@@ -1741,6 +1756,7 @@ Public Class PageVersionInstall
     End Sub
 
 #End Region
+
 #Region "LegacyFabric 列表"
 
     ''' <summary>
@@ -1779,7 +1795,7 @@ Public Class PageVersionInstall
             CardLegacyFabric.SwapControl = PanLegacyFabric
             CardLegacyFabric.InstallMethod = Sub(Stack As StackPanel)
                                                  For Each item In Stack.Tag
-                                                     Stack.Children.Add(LegacyFabricDownloadListItem(CType(item, JObject), AddressOf FrmVersionInstall.LegacyFabric_Selected))
+                                                     Stack.Children.Add(LegacyFabricDownloadListItem(CType(item, JObject), AddressOf FrmInstanceInstall.LegacyFabric_Selected))
                                                  Next
                                              End Sub
         Catch ex As Exception
@@ -1939,7 +1955,7 @@ Public Class PageVersionInstall
             CardQuilt.SwapControl = PanQuilt
             CardQuilt.InstallMethod = Sub(Stack As StackPanel)
                                           For Each item In Stack.Tag
-                                              Stack.Children.Add(QuiltDownloadListItem(CType(item, JObject), AddressOf FrmVersionInstall.Quilt_Selected))
+                                              Stack.Children.Add(QuiltDownloadListItem(CType(item, JObject), AddressOf FrmInstanceInstall.Quilt_Selected))
                                           Next
                                       End Sub
         Catch ex As Exception
@@ -2044,7 +2060,7 @@ Public Class PageVersionInstall
                 SelectedQSL = currentInstalled
                 SelectedAPIName = "QFAPI / QSL"
                 SelectReload()
-            '自动选择 QSL
+                '自动选择 QSL
             ElseIf Not AutoSelectedQSL Then
                 AutoSelectedQSL = True
                 Log($"[Download] 已自动选择 QSL：{CType(PanQSL.Children(0), MyListItem).Title}")
@@ -2265,35 +2281,36 @@ Public Class PageVersionInstall
         If SelectedLoaderName IsNot Nothing AndAlso
            (Setup.Get("LaunchArgumentIndieV2") = 0 OrElse Setup.Get("LaunchArgumentIndieV2") = 2) Then
             If MyMsgBox("你尚未开启版本隔离，这会导致多个 MC 共用同一个 Mod 文件夹。" & vbCrLf &
-                        "因此在切换 MC 版本时，MC 会因为读取到与当前版本不符的 Mod 而崩溃。" & vbCrLf &
+                        "因此在切换 MC 实例时，MC 会因为读取到与当前实例不符的 Mod 而崩溃。" & vbCrLf &
                         "PCL 推荐你在开始下载前，在 设置 → 版本隔离 中开启版本隔离选项！", "版本隔离提示", "取消下载", "继续") = 1 Then
                 Exit Sub
             End If
         End If
         If BtnSelectStart.Text = "开始重置" Then
-            If MyMsgBox("你正在重置当前版本。" & vbCrLf &
-                        "PCL 将会重新联网下载该版本所需的文件，并重新安装 Mod 加载器（如有）。" & vbCrLf &
-                        "此操作不会丢失你的存档、Mod、资源包等。", "重置此版本", "继续", "取消") = 2 Then
+            If MyMsgBox("你正在重置当前实例。" & vbCrLf &
+                        "PCL 将会重新联网下载该实例所需的文件，并重新安装 Mod 加载器（如有）。" & vbCrLf &
+                        "此操作不会丢失你的存档、Mod、资源包等。", "重置此实例", "继续", "取消") = 2 Then
                 Exit Sub
             End If
         End If
         '删除 LabyMod Neo 文件
-        If PageVersionLeft.Version.PathIndie <> PageVersionLeft.Version.Path AndAlso PageVersionLeft.Version.Version.HasLabyMod Then
-            Directory.Delete(PageVersionLeft.Version.PathIndie & "labymod-neo", True)
+        If PageInstanceLeft.Instance.PathIndie <> PageInstanceLeft.Instance.Path AndAlso PageInstanceLeft.Instance.Version.HasLabyMod Then
+            Directory.Delete(PageInstanceLeft.Instance.PathIndie & "labymod-neo", True)
         End If
-        '备份版本核心文件
-        CopyFile(PageVersionLeft.Version.Path + PageVersionLeft.Version.Name + ".json", PageVersionLeft.Version.Path + "PCLInstallBackups\" + PageVersionLeft.Version.Name + ".json")
-        If File.Exists(PageVersionLeft.Version.Path + PageVersionLeft.Version.Name + ".jar") Then
-            CopyFile(PageVersionLeft.Version.Path + PageVersionLeft.Version.Name + ".jar", PageVersionLeft.Version.Path + "PCLInstallBackups\" + PageVersionLeft.Version.Name + ".jar")
+        '备份实例核心文件
+        CopyFile(PageInstanceLeft.Instance.Path + PageInstanceLeft.Instance.Name + ".json", PageInstanceLeft.Instance.Path + "PCLInstallBackups\" + PageInstanceLeft.Instance.Name + ".json")
+        If File.Exists(PageInstanceLeft.Instance.Path + PageInstanceLeft.Instance.Name + ".jar") Then
+            CopyFile(PageInstanceLeft.Instance.Path + PageInstanceLeft.Instance.Name + ".jar", PageInstanceLeft.Instance.Path + "PCLInstallBackups\" + PageInstanceLeft.Instance.Name + ".jar")
         End If
         '确认独立 API (如 Fabric API 等) 是否需要被修改
         If SelectedFabricApi?.Equals(_currentFabricApi) Then SelectedFabricApi = Nothing
         If SelectedLegacyFabricApi?.Equals(_currentLegacyFabricApi) Then SelectedLegacyFabricApi = Nothing
         If SelectedQSL?.Equals(_currentQsl) Then SelectedQSL = Nothing
+        If SelectedOptiFabric?.Equals(_currentOptiFabric) Then SelectedOptiFabric = Nothing
         '提交安装申请
         Dim Request As New McInstallRequest With {
-            .TargetVersionName = PageVersionLeft.Version.Name,
-            .TargetVersionFolder = $"{PathMcFolder}versions\{PageVersionLeft.Version.Name}\",
+            .TargetInstanceName = PageInstanceLeft.Instance.Name,
+            .TargetInstanceFolder = $"{PathMcFolder}versions\{PageInstanceLeft.Instance.Name}\",
             .MinecraftJson = SelectedMinecraftJsonUrl,
             .MinecraftName = SelectedMinecraftId,
             .OptiFineEntry = SelectedOptiFine,
@@ -2319,6 +2336,7 @@ Public Class PageVersionInstall
         If SelectedFabricApi IsNot Nothing And _currentFabricApiPath IsNot Nothing Then File.Delete(_currentFabricApiPath)
         If SelectedLegacyFabricApi IsNot Nothing And _currentLegacyFabricApiPath IsNot Nothing Then File.Delete(_currentLegacyFabricApiPath)
         If SelectedQSL IsNot Nothing And _currentQslPath IsNot Nothing Then File.Delete(_currentQslPath)
+        If SelectedOptiFabric IsNot Nothing And _currentOptiFabricPath IsNot Nothing Then File.Delete(_currentOptiFabricPath)
         '返回主页
         FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.Launch})
     End Sub

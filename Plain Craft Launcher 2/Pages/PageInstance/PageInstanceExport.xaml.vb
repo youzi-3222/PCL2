@@ -15,27 +15,27 @@ Public Class ExportOption
     Public Property RequireModLoaderOrOptiFine As Boolean = False
 End Class
 
-Public Class PageVersionExport
+Public Class PageInstanceExport
     Implements IRefreshable
 
     Private CurrentVersion As String = ""
-    Private Sub PageVersionExport_Loaded() Handles Me.Loaded
+    Private Sub PageInstanceExport_Loaded() Handles Me.Loaded
         AniControlEnabled += 1
-        If CurrentVersion <> PageVersionLeft.Version.Path Then RefreshAll() '切换到了另一个版本，重置页面
+        If CurrentVersion <> PageInstanceLeft.Instance.Path Then RefreshAll() '切换到了另一个实例，重置页面
         BtnAdvancedHelp.EventData = "指南/整合包制作.json"
         AniControlEnabled -= 1
     End Sub
     Public Sub RefreshAll() Implements IRefreshable.Refresh
         Log($"[Export] 刷新导出页面")
-        HintOptiFine.Visibility = If(PageVersionLeft.Version.Version.HasOptiFine, Visibility.Visible, Visibility.Collapsed)
-        CurrentVersion = PageVersionLeft.Version.Path
+        HintOptiFine.Visibility = If(PageInstanceLeft.Instance.Version.HasOptiFine, Visibility.Visible, Visibility.Collapsed)
+        CurrentVersion = PageInstanceLeft.Instance.Path
         TextExportName.Text = ""
-        TextExportName.HintText = PageVersionLeft.Version.Name
+        TextExportName.HintText = PageInstanceLeft.Instance.Name
         TextExportVersion.Text = ""
         TextExportVersion.HintText = "1.0.0"
         CheckAdvancedInclude.Checked = False
         CheckAdvancedModrinth.Checked = False
-        GetExportOption(CheckOptionsBasic).Description = PageVersionLeft.Version.GetDefaultDescription()
+        GetExportOption(CheckOptionsBasic).Description = PageInstanceLeft.Instance.GetDefaultDescription()
         ResetConfigOverrides()
         ReloadAllSubOptions()
         RefreshAllOptionsUI()
@@ -57,7 +57,7 @@ Public Class PageVersionExport
     Private Sub ReloadSubOptions(Panel As StackPanel, AcceptCompressedFile As Boolean, AcceptFolder As Boolean, ParamArray Folders As String())
         Panel.Children.Clear()
         For Each Folder In Folders
-            Dim TargetFolder As New DirectoryInfo(PageVersionLeft.Version.PathIndie & Folder)
+            Dim TargetFolder As New DirectoryInfo(PageInstanceLeft.Instance.PathIndie & Folder)
             If Not TargetFolder.Exists() Then Continue For
             '查找文件夹下的对应项
             If AcceptCompressedFile Then
@@ -99,7 +99,7 @@ Public Class PageVersionExport
                 Return False
             End Try
         End Function
-        Dim PathInfo As New DirectoryInfo(PageVersionLeft.Version.PathIndie)
+        Dim PathInfo As New DirectoryInfo(PageInstanceLeft.Instance.PathIndie)
         AllEntries.AddRange(PathInfo.EnumerateFiles().Select(Function(f) f.Name))
         For Each SubFolder In PathInfo.EnumerateDirectories().Where(IsValidDirectory)
             AllEntries.Add($"{SubFolder.Name}\")
@@ -111,9 +111,9 @@ Public Class PageVersionExport
         Dim IsVisible =
         Function(TargetOption As ExportOption) As Boolean
             '检查需要 OptiFine 或 Mod 加载器
-            If TargetOption.RequireOptiFine AndAlso Not PageVersionLeft.Version.Version.HasOptiFine Then Return False
-            If TargetOption.RequireModLoader AndAlso Not PageVersionLeft.Version.Modable Then Return False
-            If TargetOption.RequireModLoaderOrOptiFine AndAlso Not PageVersionLeft.Version.Version.HasOptiFine AndAlso Not PageVersionLeft.Version.Modable Then Return False
+            If TargetOption.RequireOptiFine AndAlso Not PageInstanceLeft.Instance.Version.HasOptiFine Then Return False
+            If TargetOption.RequireModLoader AndAlso Not PageInstanceLeft.Instance.Modable Then Return False
+            If TargetOption.RequireModLoaderOrOptiFine AndAlso Not PageInstanceLeft.Instance.Version.HasOptiFine AndAlso Not PageInstanceLeft.Instance.Modable Then Return False
             '粗略检查是否可能有符合规则的文件/文件夹
             Return StandardizeLines(If(TargetOption.Rules, TargetOption.ShowRules).Split("|"c), True).Any(
             Function(Rule As String)
@@ -129,9 +129,9 @@ Public Class PageVersionExport
                 Rule = Rule.Trim("*?".ToCharArray)
                 If Rule.Split({"\"c}, StringSplitOptions.RemoveEmptyEntries).Count >= 3 Then
                     If Rule.EndsWithF("\") Then
-                        Return IsValidDirectory(New DirectoryInfo(PageVersionLeft.Version.PathIndie & Rule)) '文件夹有效
+                        Return IsValidDirectory(New DirectoryInfo(PageInstanceLeft.Instance.PathIndie & Rule)) '文件夹有效
                     Else
-                        Return File.Exists(PageVersionLeft.Version.PathIndie & Rule) '文件有效
+                        Return File.Exists(PageInstanceLeft.Instance.PathIndie & Rule) '文件有效
                     End If
                 Else
                     Return False
@@ -404,7 +404,7 @@ Public Class PageVersionExport
         Dim LoaderName As String = $"导出整合包：" & PackName
         For Each OngoingLoader In LoaderTaskbar
             If OngoingLoader.Name <> LoaderName Then Continue For
-            FrmMain.PageChange(FormMain.PageType.DownloadManager)
+            FrmMain.PageChange(FormMain.PageType.TaskManager)
             Return
         Next
 
@@ -434,8 +434,8 @@ Public Class PageVersionExport
         '缓存所需参数
         Dim CacheFolder = RequestTaskTempFolder()
         Dim OverridesFolder = CacheFolder & "modpack\overrides\"
-        Dim McVersion = PageVersionLeft.Version
-        Dim PathIndie As String = McVersion.PathIndie
+        Dim McInstance = PageInstanceLeft.Instance
+        Dim PathIndie As String = McInstance.PathIndie
         Dim CheckHostedAssets As Boolean = Not CheckAdvancedInclude.Checked
         Dim ModrinthUploadMode As Boolean = CheckAdvancedModrinth.Checked
         Dim IncludePCL As Boolean = CheckOptionsPcl.Checked
@@ -466,7 +466,7 @@ Public Class PageVersionExport
         Loaders.Add(New LoaderTask(Of Integer, List(Of LocalCompFile))("复制导出内容",
         Sub(Loader As LoaderTask(Of Integer, List(Of LocalCompFile)))
             Loader.Output = New List(Of LocalCompFile)
-            '复制版本文件
+            '复制实例文件
             Dim Progress As Integer = 0
             Dim SearchFolder As Action(Of DirectoryInfo)
             SearchFolder =
@@ -528,8 +528,8 @@ Public Class PageVersionExport
                 End If
             Next
             Loader.Progress = 0.97
-            '复制 PCL 版本设置
-            CopyDirectory(McVersion.Path & "PCL\", OverridesFolder & "PCL\")
+            '复制 PCL 实例设置
+            CopyDirectory(McInstance.Path & "PCL\", OverridesFolder & "PCL\")
 #If RELEASE Then
             '复制 PCL 本体
             If IncludePCL Then CopyFile(PathWithName, CacheFolder & "Plain Craft Launcher.exe")
@@ -651,16 +651,16 @@ Public Class PageVersionExport
             Next
             Loader.Progress = 0.2
             '导出最终 JSON 文件
-            Dim Dependencies As New JObject From {{"minecraft", McVersion.Version.McName}}
-            If McVersion.Version.HasForge Then Dependencies.Add("forge", McVersion.Version.ForgeVersion)
-            If McVersion.Version.HasFabric Then Dependencies.Add("fabric-loader", McVersion.Version.FabricVersion)
-            If McVersion.Version.HasNeoForge Then Dependencies.Add("neoforge", McVersion.Version.NeoForgeVersion)
+            Dim Dependencies As New JObject From {{"minecraft", McInstance.Version.McName}}
+            If McInstance.Version.HasForge Then Dependencies.Add("forge", McInstance.Version.ForgeVersion)
+            If McInstance.Version.HasFabric Then Dependencies.Add("fabric-loader", McInstance.Version.FabricVersion)
+            If McInstance.Version.HasNeoForge Then Dependencies.Add("neoforge", McInstance.Version.NeoForgeVersion)
             Dim ResultJson As New JObject From {
                 {"game", "minecraft"},
                 {"formatVersion", 1},
                 {"versionId", PackVersion},
                 {"name", PackName},
-                {"summary", McVersion.Info},
+                {"summary", McInstance.Info},
                 {"files", Files},
                 {"dependencies", Dependencies}
             }
@@ -694,7 +694,7 @@ Public Class PageVersionExport
         LoaderTaskbarAdd(MainLoader)
         FrmMain.BtnExtraDownload.ShowRefresh()
         FrmMain.BtnExtraDownload.Ribble()
-        FrmMain.PageChange(FormMain.PageType.DownloadManager)
+        FrmMain.PageChange(FormMain.PageType.TaskManager)
     End Sub
 
 #End Region

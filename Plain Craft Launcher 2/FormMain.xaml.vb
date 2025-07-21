@@ -536,10 +536,10 @@ Retry:
         End If
         '按 ESC 返回上一级
         If e.Key = Key.Escape Then TriggerPageBack()
-        '更改隐藏版本可见性
-        If e.Key = Key.F11 AndAlso PageCurrent = FormMain.PageType.VersionSelect Then
+        '更改隐藏实例可见性
+        If e.Key = Key.F11 AndAlso PageCurrent = FormMain.PageType.InstanceSelect Then
             FrmSelectRight.ShowHidden = Not FrmSelectRight.ShowHidden
-            LoaderFolderRun(McVersionListLoader, PathMcFolder, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
+            LoaderFolderRun(McInstanceListLoader, PathMcFolder, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
             Return
         End If
         '更改功能隐藏可见性
@@ -578,8 +578,8 @@ Retry:
     Private Sub TriggerPageBack()
         If PageCurrent = PageType.Download AndAlso PageCurrentSub = PageSubType.DownloadInstall AndAlso FrmDownloadInstall.IsInSelectPage Then
             FrmDownloadInstall.ExitSelectPage()
-        ElseIf PageCurrent = PageType.VersionSetup AndAlso PageCurrentSub = PageSubType.VersionInstall AndAlso FrmVersionInstall.IsInSelectPage Then
-            FrmVersionInstall.ExitSelectPage()
+        ElseIf PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.VersionInstall AndAlso FrmInstanceInstall.IsInSelectPage Then
+            FrmInstanceInstall.ExitSelectPage()
         Else
             PageBack()
         End If
@@ -589,12 +589,12 @@ Retry:
     Private Sub FormMain_Activated() Handles Me.Activated
         Try
             If Setup.Get("ToolDownloadClipboard") Then CompClipboard.GetClipboardResource()
-            If PageCurrent = PageType.VersionSetup AndAlso PageCurrentSub = PageSubType.VersionMod Then
+            If PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.VersionMod Then
                 'Mod 管理自动刷新
-                FrmVersionMod.ReloadCompFileList()
-            ElseIf PageCurrent = PageType.VersionSelect Then
-                '版本选择自动刷新
-                LoaderFolderRun(McVersionListLoader, PathMcFolder, LoaderFolderRunType.RunOnUpdated, MaxDepth:=1, ExtraPath:="versions\")
+                FrmInstanceMod.ReloadCompFileList()
+            ElseIf PageCurrent = PageType.InstanceSelect Then
+                '实例选择自动刷新
+                LoaderFolderRun(McInstanceListLoader, PathMcFolder, LoaderFolderRunType.RunOnUpdated, MaxDepth:=1, ExtraPath:="versions\")
             End If
         Catch ex As Exception
             Log(ex, "切回窗口时出错", LogLevel.Feedback)
@@ -656,9 +656,9 @@ Retry:
                                     PageLoginAuth.DraggedAuthServer = AuthlibServer
                                     FrmLaunchLeft.RefreshPage(True, McLoginType.Auth)
                                 End Sub)
-                        If PageCurrent = PageType.VersionSetup AndAlso PageCurrentSub = PageSubType.VersionSetup Then
+                        If PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.VersionSetup Then
                             '正在服务器选项页，需要刷新设置项显示
-                            FrmVersionSetup.Reload()
+                            FrmInstanceSetup.Reload()
                         End If
                     ElseIf Str.StartsWithF("file:///") Then
                         '文件拖拽（例如从浏览器下载窗口拖入）
@@ -731,65 +731,65 @@ Retry:
                 Return
             End If
             '安装 Mod
-            If PageVersionCompResource.InstallMods(FilePathList) Then Exit Sub
+            If PageInstanceCompResource.InstallMods(FilePathList) Then Exit Sub
             '安装投影文件
             If {"litematic", "nbt", "schematic", "schem"}.Contains(Extension) Then
                 Log($"[System] 文件为 {Extension} 格式，尝试作为原理图安装")
                 ' 获取当前文件夹路径（如果在资源管理页面）
                 Dim targetFolderPath As String = Nothing
-                If PageCurrent = PageType.VersionSetup AndAlso PageCurrentSub = PageSubType.VersionSchematic AndAlso 
-                   FrmVersionSchematic IsNot Nothing AndAlso TypeOf FrmVersionSchematic Is PageVersionCompResource Then
-                    targetFolderPath = DirectCast(FrmVersionSchematic, PageVersionCompResource).CurrentFolderPath
+                If PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.VersionSchematic AndAlso
+                   FrmInstanceSchematic IsNot Nothing AndAlso TypeOf FrmInstanceSchematic Is PageInstanceCompResource Then
+                    targetFolderPath = DirectCast(FrmInstanceSchematic, PageInstanceCompResource).CurrentFolderPath
                 End If
-                PageVersionCompResource.InstallCompFiles(FilePathList, CompType.Schematic, targetFolderPath)
+                PageInstanceCompResource.InstallCompFiles(FilePathList, CompType.Schematic, targetFolderPath)
                 Exit Sub
             End If
             '处理资源安装
-            If PageCurrent = PageType.VersionSetup AndAlso {"zip"}.Any(Function(i) i = Extension) Then
+            If PageCurrent = PageType.InstanceSetup AndAlso {"zip"}.Any(Function(i) i = Extension) Then
                 Select Case PageCurrentSub
                     Case PageSubType.VersionWorld
-                        Dim DestFolder = PageVersionLeft.Version.PathIndie + "saves\" + GetFileNameWithoutExtentionFromPath(FilePath)
+                        Dim DestFolder = PageInstanceLeft.Instance.PathIndie + "saves\" + GetFileNameWithoutExtentionFromPath(FilePath)
                         If Directory.Exists(DestFolder) Then
                             Hint("发现同名文件夹，无法粘贴：" + DestFolder, HintType.Critical)
                             Exit Sub
                         End If
                         ExtractFile(FilePath, DestFolder)
                         Hint($"已导入 {GetFileNameWithoutExtentionFromPath(FilePath)}", HintType.Finish)
-                        If FrmVersionSaves IsNot Nothing Then RunInUi(Sub() FrmVersionSaves.Reload())
+                        If FrmInstanceSaves IsNot Nothing Then RunInUi(Sub() FrmInstanceSaves.Reload())
                         Exit Sub
                     Case PageSubType.VersionResourcePack
-                        Dim DestFile = PageVersionLeft.Version.PathIndie + "resourcepacks\" + GetFileNameFromPath(FilePath)
+                        Dim DestFile = PageInstanceLeft.Instance.PathIndie + "resourcepacks\" + GetFileNameFromPath(FilePath)
                         If File.Exists(DestFile) Then
                             Hint("已存在同名文件：" + DestFile, HintType.Critical)
                             Exit Sub
                         End If
                         CopyFile(FilePath, DestFile)
                         Hint($"已导入 {GetFileNameFromPath(FilePath)}", HintType.Finish)
-                        If FrmVersionResourcePack IsNot Nothing Then RunInUi(Sub() FrmVersionResourcePack.ReloadCompFileList())
+                        If FrmInstanceResourcePack IsNot Nothing Then RunInUi(Sub() FrmInstanceResourcePack.ReloadCompFileList())
                         Exit Sub
                     Case PageSubType.VersionShader
-                        Dim DestFile = PageVersionLeft.Version.PathIndie + "shaderpacks\" + GetFileNameFromPath(FilePath)
+                        Dim DestFile = PageInstanceLeft.Instance.PathIndie + "shaderpacks\" + GetFileNameFromPath(FilePath)
                         If File.Exists(DestFile) Then
                             Hint("已存在同名文件：" + DestFile, HintType.Critical)
                             Exit Sub
                         End If
                         CopyFile(FilePath, DestFile)
                         Hint($"已导入 {GetFileNameFromPath(FilePath)}", HintType.Finish)
-                        If FrmVersionShader IsNot Nothing Then RunInUi(Sub() FrmVersionShader.ReloadCompFileList())
+                        If FrmInstanceShader IsNot Nothing Then RunInUi(Sub() FrmInstanceShader.ReloadCompFileList())
                         Exit Sub
                 End Select
             End If
             '处理投影文件
-            If PageCurrent = PageType.VersionSetup AndAlso {"litematic", "nbt", "schematic", "schem"}.Contains(Extension) AndAlso PageCurrentSub = PageSubType.VersionSchematic Then
-                Dim DestFile = PageVersionLeft.Version.PathIndie + "schematics\" + GetFileNameFromPath(FilePath)
+            If PageCurrent = PageType.InstanceSetup AndAlso {"litematic", "nbt", "schematic", "schem"}.Contains(Extension) AndAlso PageCurrentSub = PageSubType.VersionSchematic Then
+                Dim DestFile = PageInstanceLeft.Instance.PathIndie + "schematics\" + GetFileNameFromPath(FilePath)
                 If File.Exists(DestFile) Then
                     Hint("已存在同名文件：" + DestFile, HintType.Critical)
                     Exit Sub
                 End If
-                Directory.CreateDirectory(PageVersionLeft.Version.PathIndie + "schematics\")
+                Directory.CreateDirectory(PageInstanceLeft.Instance.PathIndie + "schematics\")
                 CopyFile(FilePath, DestFile)
                 Hint($"已导入 {GetFileNameFromPath(FilePath)}", HintType.Finish)
-                If FrmVersionSchematic IsNot Nothing Then RunInUi(Sub() FrmVersionSchematic.ReloadCompFileList())
+                If FrmInstanceSchematic IsNot Nothing Then RunInUi(Sub() FrmInstanceSchematic.ReloadCompFileList())
                 Exit Sub
             End If
             '安装整合包
@@ -942,17 +942,17 @@ Retry:
         ''' </summary>
         Other = 4
         ''' <summary>
-        ''' 版本选择。这是一个副页面。
+        ''' 实例选择。这是一个副页面。
         ''' </summary>
-        VersionSelect = 5
+        InstanceSelect = 5
         ''' <summary>
-        ''' 下载管理。这是一个副页面。
+        ''' 任务管理。这是一个副页面。
         ''' </summary>
-        DownloadManager = 6
+        TaskManager = 6
         ''' <summary>
-        ''' 版本设置。这是一个副页面。
+        ''' 实例设置。这是一个副页面。
         ''' </summary>
-        VersionSetup = 7
+        InstanceSetup = 7
         ''' <summary>
         ''' 资源工程详情。这是一个副页面。
         ''' </summary>
@@ -1033,14 +1033,14 @@ Retry:
     ''' </summary>
     Private Function PageNameGet(Stack As PageStackData) As String
         Select Case Stack.Page
-            Case PageType.VersionSelect
-                Return "版本选择"
-            Case PageType.DownloadManager
-                Return "下载管理"
+            Case PageType.InstanceSelect
+                Return "实例选择"
+            Case PageType.TaskManager
+                Return "任务管理"
             Case PageType.GameLog
                 Return "实时日志"
-            Case PageType.VersionSetup
-                Return "版本设置 - " & If(PageVersionLeft.Version Is Nothing, "未知版本", PageVersionLeft.Version.Name)
+            Case PageType.InstanceSetup
+                Return "实例设置 - " & If(PageInstanceLeft.Instance Is Nothing, "未知实例", PageInstanceLeft.Instance.Name)
             Case PageType.CompDetail
                 Return "资源下载 - " & CType(Stack.Additional(0), CompProject).TranslatedName
             Case PageType.HelpDetail
@@ -1092,9 +1092,9 @@ Retry:
                 Case PageType.Other
                     If FrmOtherLeft Is Nothing Then FrmOtherLeft = New PageOtherLeft
                     Return FrmOtherLeft.PageID
-                Case PageType.VersionSetup
-                    If FrmVersionLeft Is Nothing Then FrmVersionLeft = New PageVersionLeft
-                    Return FrmVersionLeft.PageID
+                Case PageType.InstanceSetup
+                    If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
+                    Return FrmInstanceLeft.PageID
                 Case Else
                     Return 0 '没有子页面
             End Select
@@ -1173,17 +1173,17 @@ Retry:
         Else
             '切换到次页面
             Select Case Stack.Page
-                Case PageType.VersionSetup
-                    If FrmVersionLeft Is Nothing Then FrmVersionLeft = New PageVersionLeft
-                    For Each item In FrmVersionLeft.PanItem.Children
+                Case PageType.InstanceSetup
+                    If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
+                    For Each item In FrmInstanceLeft.PanItem.Children
                         If item.GetType() Is GetType(MyListItem) AndAlso Val(item.tag) = SubType Then
                             CType(item, MyListItem).SetChecked(True, True, Stack = PageCurrent)
                             Exit For
                         End If
                     Next
                 Case PageType.VersionSaves
-                    If FrmVersionSavesLeft Is Nothing Then FrmVersionSavesLeft = New PageVersionSavesLeft
-                    For Each item In FrmVersionSavesLeft.PanItem.Children
+                    If FrmInstanceSavesLeft Is Nothing Then FrmInstanceSavesLeft = New PageInstanceSavesLeft
+                    For Each item In FrmInstanceSavesLeft.PanItem.Children
                         If item.GetType() Is GetType(MyListItem) AndAlso Val(item.tag) = SubType Then
                             CType(item, MyListItem).SetChecked(True, True, Stack = PageCurrent)
                             Exit For
@@ -1287,26 +1287,26 @@ Retry:
                     If FrmLogLeft Is Nothing Then FrmLogLeft = New PageLogLeft
                     If FrmLogLeft Is Nothing Then FrmLogRight = New PageLogRight
                     PageChangeAnim(FrmLogLeft, FrmLogRight)
-                Case PageType.VersionSelect '版本选择
+                Case PageType.InstanceSelect '实例选择
                     If FrmSelectLeft Is Nothing Then FrmSelectLeft = New PageSelectLeft
                     If FrmSelectRight Is Nothing Then FrmSelectRight = New PageSelectRight
                     PageChangeAnim(FrmSelectLeft, FrmSelectRight)
-                Case PageType.DownloadManager '下载管理
+                Case PageType.TaskManager '任务管理
                     If FrmSpeedLeft Is Nothing Then FrmSpeedLeft = New PageSpeedLeft
                     If FrmSpeedRight Is Nothing Then FrmSpeedRight = New PageSpeedRight
                     PageChangeAnim(FrmSpeedLeft, FrmSpeedRight)
-                Case PageType.VersionSetup '版本设置
-                    If FrmVersionLeft Is Nothing Then FrmVersionLeft = New PageVersionLeft
-                    PageChangeAnim(FrmVersionLeft, FrmVersionLeft.PageGet(SubType))
+                Case PageType.InstanceSetup '实例设置
+                    If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
+                    PageChangeAnim(FrmInstanceLeft, FrmInstanceLeft.PageGet(SubType))
                 Case PageType.CompDetail 'Mod 信息
                     If FrmDownloadCompDetail Is Nothing Then FrmDownloadCompDetail = New PageDownloadCompDetail
                     PageChangeAnim(New MyPageLeft, FrmDownloadCompDetail)
                 Case PageType.HelpDetail '帮助详情
                     PageChangeAnim(New MyPageLeft, Stack.Additional(1))
                 Case PageType.VersionSaves '存档管理
-                    If FrmVersionSavesLeft Is Nothing Then FrmVersionSavesLeft = New PageVersionSavesLeft
-                    PageVersionSavesLeft.CurrentSave = Stack.Additional
-                    PageChangeAnim(FrmVersionSavesLeft, FrmVersionSavesLeft.PageGet(SubType))
+                    If FrmInstanceSavesLeft Is Nothing Then FrmInstanceSavesLeft = New PageInstanceSavesLeft
+                    PageInstanceSavesLeft.CurrentSave = Stack.Additional
+                    PageChangeAnim(FrmInstanceSavesLeft, FrmInstanceSavesLeft.PageGet(SubType))
                 Case PageType.HomePageMarket '主页市场
                     FrmHomepageMarket = If(FrmHomepageMarket, New PageHomePageMarket)
                     PageChangeAnim(New MyPageLeft, FrmHomepageMarket)
@@ -1472,12 +1472,12 @@ Retry:
         MusicControlNext()
     End Sub
 
-    '下载管理
+    '任务管理
     Private Sub BtnExtraDownload_Click(sender As Object, e As EventArgs) Handles BtnExtraDownload.Click
-        PageChange(PageType.DownloadManager)
+        PageChange(PageType.TaskManager)
     End Sub
     Private Function BtnExtraDownload_ShowCheck() As Boolean
-        Return HasDownloadingTask() AndAlso Not PageCurrent = PageType.DownloadManager
+        Return HasDownloadingTask() AndAlso Not PageCurrent = PageType.TaskManager
     End Function
 
     '投降
